@@ -1,0 +1,49 @@
+HEISTFALL - bug/resource pass 1 (static audit; not run in a browser)
+
+1. Stuck keys: window blur / tab hide now releases all held keys, mouse and touch stick (no more runaway car after alt-tab).
+2. GPU memory leak: removed NPCs, cop cars, cop foot units and old barricades now dispose their geometry/materials (disp3) instead of only leaving the scene.
+3. Audio: explosion and thunder noise buffers are generated once and reused (was filling 44k-88k samples with Math.random on every explosion/thunder).
+4. NPC-vs-vehicle push-out: cheap distance test now runs before the regex type test (it ran NPCs x vehicles x regex every frame).
+5. Interaction prompts: per-frame closures for "Talk to" / "Enter vehicle" are cached, and vehicles beyond reach are skipped before building prompt strings.
+
+Known, deliberately NOT changed (needs a browser to test safely):
+- mat() makes a new material per call, but many places recolor materials in place (e.g. wrecked cars turn black), so a global cache would recolor every car. Needs a per-site refactor.
+- ~100 functions are defined twice (older layer overridden by newer layer). Harmless at runtime, but dead code and a trap when editing: always edit the LAST definition.
+
+PASS 2 (from your screenshots: black screen on Low/Medium, clipping)
+- Render path hardened: bloom failure now disables bloom and falls back to a plain render; a failed render retries without shadows instead of leaving a black canvas; renderer state (autoClear/render target) is reset before every direct render.
+- Graphics tiers: Low no longer uses a 16x16 shadow map (floor is now 512) and turns shadows off completely; shadow-map resize is otherwise unchanged.
+- NPCs no longer walk through each other or through you (separation push-out, shopkeepers/standing NPCs stay put). Does nothing while you drive/swim/ride.
+- Vehicle lights: every car/bus/truck/emergency vehicle (NPC or yours) now projects a soft headlight beam on the road at night (cheap decal, no extra dynamic lights).
+- Emotes (B, V, G wheel) are blocked and cancelled while swimming.
+
+PASS 2b: fixed High/Ultra going black (render-target reset must not run while the bloom composer is rendering).
+
+PASS 2c: the new night headlight beams now show only on Low/Medium; High/Ultra keep the original lighting.
+
+PASS 3 (code audit)
+- Scope-accurate scan for undefined variables / use-before-define: none found.
+- FIXED: news ticker, danger alerts, tutorial prompts, emote wheel, mission-passed/failed banner, error toast and FPS counter had NO CSS at all, so they rendered as raw unstyled text on top of the health bars (visible in your screenshots). Added proper panels. The mission-passed/failed banner also had no element in the page, so it could never show; added.
+- FIXED: crash every frame in the final story chapter at the station (S.ms could be null when reading S.ms.s2).
+- Verified: all localStorage reads are try/guarded, event listeners are registered once, no leaked listeners.
+
+PASS 4 (headless run test)
+- Built a fake-browser harness that actually runs the game logic (new game, every cheat, all vehicle types, wanted/cops, death, weather, time of day, graphics tiers, save/load, all game modes, story start, 6000-frame random-input soak). Result: no runtime errors, no growth in scene objects or memory.
+- NaN safety net: if a bad calculation ever makes the player or camera position invalid (a classic cause of a sudden permanent black screen), it is restored to the last good position instead.
+- Performance finding: the world has ~14,000 meshes, ~7,500 separate materials and ~70 point lights (street lamps etc.) all lit at once. Low and Medium now light only the nearest 6 / 12 lamps (constant count, so no shader recompiles); High and Ultra keep the original full lighting.
+- Not changed (needs real-browser profiling): merging static meshes by material to cut draw calls.
+
+PASS 5 (aircraft, keys, roads) - all verified in the headless harness, not in a real browser
+AIRCRAFT
+- FIXED: airport planes could never be boarded (you were pushed 4.1 away, the Enter prompt needed 3.4). Big vehicles now have a bigger reach.
+- Taking an aircraft from the airport (planes, helicopter, balloons) without owning it gives +2 stars and a news report, even with no witnesses.
+- Planes: landing flare assist (descent is limited near the ground so you can actually land), hard-landing / bank damage, takeoff verified.
+- Helicopter rebuilt: new model (cabin, glass canopy, tail boom/fin, skids, 4-blade rotor, tail rotor, nav lights) and new flight model (rotor spool-up, smooth collective, cyclic tilt, ground flare, hard-landing damage).
+- Jumping out of any aircraft in the air: you drift down and land on your feet (no damage), the aircraft keeps flying/hovering, and pressing E anywhere offers "Teleport back into your <aircraft>" with its speed preserved.
+- NEW: drivable hot air balloon x2 at the airstrip (Space = burner, C = vent, W/S = thrust, A/D = turn, wind drift, bail out safely, teleport back).
+- NEW: NPC pilots. Every minute or so an airport plane takes off, flies a circuit over the city, lands, taxis back and parks (never while you are next to it).
+KEYS
+- Pause > Key Bindings: every action now has a second "+ alt" button (Backspace clears it). The default key keeps working unless you rebind it.
+ROADS
+- NEW: up to 3 roundabouts (ring road, white markings, grass island with tree and bollards) at the roomiest intersections. Traffic bends smoothly around the island instead of driving through the intersection; parked cars are moved out of the ring.
+NOT DONE YET: full vehicle-physics overhaul (tire slip, weight transfer, drivetrains, handbrake drift), pedestrian daily routines / reactions, police escalation tiers, interiors, and the architectural items from the long list.
