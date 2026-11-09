@@ -47,3 +47,12 @@ KEYS
 ROADS
 - NEW: up to 3 roundabouts (ring road, white markings, grass island with tree and bollards) at the roomiest intersections. Traffic bends smoothly around the island instead of driving through the intersection; parked cars are moved out of the ring.
 NOT DONE YET: full vehicle-physics overhaul (tire slip, weight transfer, drivetrains, handbrake drift), pedestrian daily routines / reactions, police escalation tiers, interiors, and the architectural items from the long list.
+
+PASS 6 (split + speed + WARDEN MODE)
+- PROJECT SPLIT: index.html (page + loader), style.css (all CSS), game.js (all game code). Errors now report game.js:LINE.
+- SPEED (the main cost was draw calls: each car was ~58 meshes, each person ~31, ~10,000 meshes drawn twice with shadows):
+  * Far cars (70m+) and far people (45m+) switch to one combined mesh each; tiny parts (wheel spokes, hands, soles, ...) hide beyond 30m / 24m. Close up nothing changes.
+  * Building interiors hide when you are 85m+ away (walls are opaque, so nothing visible changes).
+  * Pedestrians beyond 220m are not drawn (was 300m).
+  * Measured in my model of the scene: drawn meshes within 120m dropped from ~4,800 to ~2,300.
+- WARDEN MODE built from scratch (see README): new arena, 5 waves + boss, 4 thief types, turrets/mines/drones/laser gates, Lockdown + Surge, upgrade cards, mouse or keyboard cursor, HUD, win/lose + result screen. Menu entry renamed WARDEN MODE.
