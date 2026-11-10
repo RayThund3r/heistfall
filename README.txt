@@ -14,3 +14,6 @@ WARDEN MODE (main menu): you are the vault AI. Stop five waves of thieves (and t
  Click / Space / E to place or fire. X sells the structure under the cursor. G starts the next wave early. Between waves pick 1 of 3 upgrades (click or 1-3).
  Thief types: Runner (fast), Brute (tanky, smashes your gear), Hacker (disables turrets), Breacher (blows up defenses), Boss (final wave).
 Performance: far cars and people automatically switch to simple single-mesh versions and tiny details are hidden at a distance; building interiors are hidden when you are far away. If it is still slow use Pause > Settings > Graphics.
+
+NEW CONTROLS: RMB aim (zoom). Z block (tap just before a hit = parry). X shove. M atlas: click = waypoint, right-click = clear.
+Train: stops at NORTH / EAST / WEST stations, press E on the platform. Ferris wheel (Old Town): E at the base.
