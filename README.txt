@@ -17,3 +17,6 @@ Performance: far cars and people automatically switch to simple single-mesh vers
 
 NEW CONTROLS: RMB aim (zoom). Z block (tap just before a hit = parry). X shove. M atlas: click = waypoint, right-click = clear.
 Train: stops at NORTH / EAST / WEST stations, press E on the platform. Ferris wheel (Old Town): E at the base.
+
+NEW: U = camera view. Space at a building wall = climb to the roof. Pause > GRAPHICS for all graphics options (GPU/browser detected). Alien contracts: XENO BUREAU board in Citadel City. Cheats (type in game): visitors, invasion, xenobureau.
+Touch: phones/tablets get on-screen controls; tap the TOUCH ON/OFF button at the top to switch.
