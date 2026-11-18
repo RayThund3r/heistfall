@@ -106,3 +106,13 @@ Measured on the district: ~20,000 meshes, ~11,000 materials, ~20,000 geometries 
 5. Phones: no MSAA, pixel-ratio cap, tier capped, bloom off, PBR env map dropped, Lambert shading for merged scenery, 30 fps cap on low-end / 60 on others, smaller shadow maps.
 6. Renderer asks for the high-performance GPU; stencil/alpha buffers removed; loader downloads helper scripts in parallel (was 8 sequential requests).
 7. Add ?debug to the URL for an FPS / draw-call / batching readout.
+
+==========================================================================
+SMARTPHONE REWORK (phone.js + phone.css)
+==========================================================================
+The old scrolling "PHONE" panel is replaced by a phone that slides in from the right edge (P key, PHONE button in the touch tray).
+- Real phone look: bezel, notch, status bar with the in-game clock, signal and battery, home screen with big clock, weather/cash line, app grid, "current job" widget, and bottom Back / Home / Close buttons. Tap outside the phone to close. Backspace = back, Esc/P = close.
+- Apps: Messages (every game notification is kept with a time stamp, unread badge on the icon), Jobs (active job + daily offers + abandon), Story (progress + side quests), GPS (fast travel with search and category chips), Factions (reputation bars), Weather (time of day + weather control), Alerts (earthquake / wildfire), Stats (cash, story %, side quests, chips, distance, temperature), Settings.
+- Settings app changes real game settings live and saves them: graphics tier, resolution, frame cap, auto quality, FPS counter, master volume, look sensitivity, field of view, day length, hints, touch-control mode, vibration, and 4 wallpaper themes. "Open full settings" jumps to the pause-menu settings.
+- Typing in the GPS search never triggers game hotkeys. Works with mouse, touch and keyboard; sized for phones in landscape and portrait.
+- Falls back to the old phone automatically if phone.js is missing or fails to load.

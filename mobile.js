@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const PK=(0,eval)('(()=>({S,run,PM,PH,CUT,mode,AC,keys,TJ,CFG,CBT,WM,S0}))');   // reads the game's let/const globals cheaply (they are not on window)
 const g=n=>{try{return PK()[n]}catch(e){return undefined}};
 const setMH=(0,eval)('v=>{MH=v}'),lookBy=(0,eval)('(dx,dy)=>{yaw-=dx;pit=Math.max(.05,Math.min(1.1,pit+dy))}'),
-  callG=(0,eval)('n=>{if(n=="pause")openPause();else if(n=="pulse"){if(S&&!S.over)pulse()}else if(n=="swap"){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}}');
+  callG=(0,eval)('n=>{if(n=="pause")openPause();else if(n=="pulse"){if(S&&!S.over)pulse()}else if(n=="phone"){if(S&&S.ph==4)togPh()}else if(n=="swap"){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}}');
 const TUI=window.TUI={on:false,ctx:'',tray:false,lastTouch:0};
 window.touchOn=function(){return TUI.on};
 
@@ -56,7 +56,7 @@ const B=[ // id,label,size,kind,payload
  ['ext','EXIT','sm','tap','KeyE'],['cam','VIEW','xs','tap','KeyU'],['up','UP','mid','hold','Space'],['dn','DOWN','mid','hold','KeyC'],
  ['pause','II','xs','act','pause'],['mapb','MAP','xs','tap','KeyM'],['mapx','✕','sm','tap','KeyM'],
  ['wplace','BUILD','big','tap','Space'],['wrot','ROT','xs','tap','KeyR'],['wsell','SELL','xs','tap','KeyX'],['wgo','WAVE','sm','tap','KeyG']];
-const TRAY=[['swap','SWAP','act','swap'],['blk','BLOCK','hold','KeyZ'],['shv','SHOVE','tap','KeyX'],['med','MED','tap','KeyF'],['phn','PHONE','tap','KeyP'],['emo','EMOTE','tap','KeyG'],['dive','DIVE','hold','KeyC'],['sit','SIT','tap','KeyN'],['view','VIEW','tap','KeyU']];
+const TRAY=[['swap','SWAP','act','swap'],['blk','BLOCK','hold','KeyZ'],['shv','SHOVE','tap','KeyX'],['med','MED','tap','KeyF'],['phn','PHONE','act','phone'],['emo','EMOTE','tap','KeyG'],['dive','DIVE','hold','KeyC'],['sit','SIT','tap','KeyN'],['view','VIEW','tap','KeyU']];
 
 function build(){
   if($('tui'))return;

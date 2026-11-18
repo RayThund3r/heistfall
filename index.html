@@ -16,6 +16,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="mobile.css">
+<link rel="stylesheet" href="phone.css">
 <script>
 /* Device profile: computed BEFORE the game starts so the renderer can be created correctly. */
 (function(){
@@ -62,6 +63,7 @@ function load(u){return new Promise(function(res){var e=document.createElement('
   window.__booted=1; /* from here on an error in an optional layer can never replace the game with the error screen */
   await load('perf.js?v=2');   /* performance layer */
   await load('mobile.js?v=2'); /* touch + mobile UI layer */
+  await load('phone.js?v=2');  /* in-game smartphone */
 })();
 </script>
 </body>
