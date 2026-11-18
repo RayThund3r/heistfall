@@ -77,3 +77,32 @@ CAMERA VIEWS: U cycles 5 views (on foot: standard / first person / shoulder / hi
 GRAPHICS: new Pause > GRAPHICS tab (quality preset, resolution scale, FPS cap, shadows + shadow distance, street-light count, bloom, draw distance, detail distance, pedestrian distance, particles, clouds, FOV, brightness/contrast/saturation, colour style, vignette, shake) with GPU + browser detection, device-based best-settings button, software-renderer warning, one-off speed check that lowers quality if the first seconds run slowly.
 TOUCH: rebuilt touch controls (floating stick, look pad, context buttons for on-foot / vehicle / aircraft) with an on-screen TOUCH ON/OFF toggle; shown automatically on phones/tablets.
 NAMING: the gun store AMMU-NATION is now IRONHAVEN ARMS.
+
+==========================================================================
+MOBILE + PERFORMANCE PASS (touch controls, one build for phone/tablet/desktop)
+==========================================================================
+Files added: mobile.js, mobile.css, perf.js, manifest.webmanifest, icon-192/512.png
+Files changed: index.html (new loader + mobile meta), game.js (3 small patches), style.css untouched.
+
+WHY MOBILE PLAYERS WERE STUCK ON THE TITLE SCREEN
+- The title screen only listened for a key press or mousedown. Phones have no keyboard and iOS Safari does not emit mouse events for a tap on a non-clickable area, so nothing could start the game. It now accepts pointerdown / touchend and says TAP TO START.
+- The home menu used fixed desktop sizing (centred column that clipped its top on short screens, fixed-position perk panel on top of the buttons). It is now a scrollable two-column layout on phones (single column in portrait).
+
+TOUCH CONTROLS (mobile.js, rebuilt from scratch; the two old overlapping touch layers were removed)
+- Floating left stick (appears under the thumb, origin follows the thumb, push to the rim = auto-sprint). Drag the right side to look, with slight flick acceleration and ADS slow-down.
+- Context-aware buttons that change by situation: on foot (FIRE/AIM/JUMP/USE/R/RUN + a ... tray with SWAP, BLOCK, SHOVE, MED, PHONE, EMOTE, DIVE, SIT, VIEW), vehicle (GAS/BRAKE/DRIFT/NITRO/EXIT/VIEW), aircraft (UP/DOWN/EXIT/NITRO/VIEW), arena modes (JUMP/DASH/PULSE/WALL/USE), Warden mode (drag = move build cursor, BUILD/ROT/SELL/WAVE).
+- Hold FIRE and drag the same thumb to aim. USE button lights up and shows the prompt when something is interactable. Tap the minimap to open the map, tap the atlas to set a waypoint, tap anywhere to skip cutscenes.
+- Prompts are reworded for touch ("[E]" -> "[USE]", "press Q" -> "tap WALL", tutorial lines, etc.).
+- Auto: touch UI turns on for phones/tablets, and on a touch-screen laptop the first touch switches it on / the first mouse move switches it off. Settings -> Touch controls (auto / on / off) still overrides.
+- Fullscreen + landscape lock on first tap (Android), rotate-your-phone overlay in portrait, screen wake lock, audio unlock on first touch (iOS), auto-pause when the app is backgrounded, pinch/double-tap zoom and long-press menus blocked, safe-area (notch) aware, vibration feedback on Android.
+- Add to Home Screen (manifest + iOS meta) gives real fullscreen on iPhone.
+
+PERFORMANCE (perf.js + 3 renderer lines in game.js)
+Measured on the district: ~20,000 meshes, ~11,000 materials, ~20,000 geometries (each = a separate draw call), ~15,000 meshes casting shadows, up to 72 real point lights on High/Ultra.
+1. Static batching: ~5,900 static scenery meshes are baked into ~1,200 merged meshes (per 48 m cell and material, colour baked into vertex colours) plus per-building furniture batches that the game's own interior-culling still toggles. Dynamic things (people, cars, anything that moves, toggles or recolours) are never merged. A self-healing monitor un-merges any chunk if something in it ever changes, and day/night window glow stays in sync. Disable with ?nobatch or CFG.batch=false.
+2. Light budget: real point lights limited by tier (6/8/12/20, phones 4-6) instead of all 72 (the cost of a shader loop over every lamp per pixel). Constant count, so no shader recompiles.
+3. Shadow map re-rendered every 2nd frame (shadows follow the player; one frame of lag is invisible). CFG.shadowFull restores every frame.
+4. Dynamic resolution rewritten: the old one re-allocated the canvas and every post-processing buffer every 2.5 s and could oscillate. New one measures real frame time against the display refresh rate, moves in 5% steps with cooldowns and hysteresis, and remembers a level that failed.
+5. Phones: no MSAA, pixel-ratio cap, tier capped, bloom off, PBR env map dropped, Lambert shading for merged scenery, 30 fps cap on low-end / 60 on others, smaller shadow maps.
+6. Renderer asks for the high-performance GPU; stencil/alpha buffers removed; loader downloads helper scripts in parallel (was 8 sequential requests).
+7. Add ?debug to the URL for an FPS / draw-call / batching readout.

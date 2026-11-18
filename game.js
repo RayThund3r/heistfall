@@ -4,7 +4,7 @@ const ST=[{t:'Chapter 1: Blackout',b:'Nova Crew breaks into The Citadel, a vault
 {t:'Chapter 2: Warden Awakens',b:'WARDEN is learning from every move you make. Vesper vanishes from comms. The core is unstable, and the only way out runs through it.',o:'You escaped, but WARDEN left a door open on purpose. Why would it let you go?'},
 {t:'Chapter 3: Fallout',b:'The core is about to blow. Vesper sold the crew out, and WARDEN is the only one telling the truth. Reach the extraction chopper before the Citadel falls.',o:'You make it out. WARDEN broadcasts one last message: "Now you know what they built me to protect." The crew goes legit. For now.'}];
 let ch=0,mode='story',chap=1,keys={},yaw=0,pit=.35,S=null,run=false,paused=false,pv={x:0,z:0},prevPause=false;
-const clock=new THREE.Clock();const R=new THREE.WebGLRenderer({canvas:$('c'),antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.shadowMap.enabled=true;R.shadowMap.type=THREE.PCFSoftShadowMap;
+const clock=new THREE.Clock();const HFD=window.HF||{};const R=new THREE.WebGLRenderer({canvas:$('c'),antialias:!HFD.mobile,powerPreference:'high-performance',stencil:false,alpha:false});R.setPixelRatio(Math.min(devicePixelRatio,HFD.mobile?1.25:2));R.shadowMap.enabled=true;R.shadowMap.type=HFD.mobile?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;
 const sc=new THREE.Scene();sc.background=new THREE.Color(0x0b1020);sc.fog=new THREE.Fog(0x0b1020,40,150);
 const cam=new THREE.PerspectiveCamera(65,1,.8,2600);
 const hemi=new THREE.HemisphereLight(0x9bb8ff,0x332244,.35);sc.add(hemi);
@@ -694,8 +694,8 @@ function hasSave(){try{return !!localStorage.getItem('hf_save')}catch(e){return 
 function saveGame(q){if(!S||S.ph!=4)return;try{localStorage.setItem('hf_save',JSON.stringify({sc:S.sc,tm:S.tm,day:S.day,wz:S.wz,wo:S.wo,mag:S.mag,res:S.res,ar:S.ar,hp:S.hp,max:S.max,inv:S.inv,own:S.own,rep:S.rep,pol:S.pol,lic:S.lic,pos:[P.position.x,P.position.z],ch,sk,PS,APP,dk:S.dk||0,hist:S.hist}));if(!q)notify('Game saved')}catch(e){if(!q)notify('Save failed')}}
 function loadGame(){try{const d=JSON.parse(localStorage.getItem('hf_save'));if(!d)return;PM=false;$('pm').style.display='none';ch=d.ch;sk=d.sk;PS=d.PS||[];APP=d.APP||APP;go('district');Object.assign(S,d);S.loaded=1;S.hp=d.hp;if(landAt(d.pos[0],d.pos[1]))P.position.set(d.pos[0],0,d.pos[1]);paused=false}catch(e){}}
 // intro / outro
-function intro(){M.className='intro';M.style.display='flex';Hd.style.display='none';run=false;M.innerHTML='<div class="il"><span>HEIST</span><b>FALL</b></div><div class="it">STEAL IT · SURVIVE IT · ESCAPE IT</div><div class="ik">PRESS ANY KEY</div>'}
-const goH=()=>{if(M.classList.contains('intro')){startAudio();sfx(600,.3,'sine',.12);home()}else if(M.classList.contains('outro')&&performance.now()>OUTT){home()}};addEventListener('keydown',goH);addEventListener('mousedown',goH);
+function intro(){M.className='intro';M.style.display='flex';Hd.style.display='none';run=false;M.innerHTML='<div class="il"><span>HEIST</span><b>FALL</b></div><div class="it">STEAL IT · SURVIVE IT · ESCAPE IT</div><div class="ik">'+(HFD.touch?'TAP TO START':'PRESS ANY KEY')+'</div>'}
+const goH=()=>{if(M.classList.contains('intro')){startAudio();sfx(600,.3,'sine',.12);home()}else if(M.classList.contains('outro')&&performance.now()>OUTT){home()}};addEventListener('keydown',goH);addEventListener('mousedown',goH);addEventListener('pointerdown',goH);addEventListener('touchend',goH,{passive:true});
 function quitGame(){if(S&&S.ph==4)saveGame(true);PM=false;paused=false;$('pm').style.display='none';document.exitPointerLock&&document.exitPointerLock();run=false;Hd.style.display='none';$('c').style.filter='';M.className='outro';M.style.display='flex';M.innerHTML='<div class="ol"><p>THANKS FOR PLAYING</p><h1>HEISTFALL</h1><small>See you in the Citadel.</small><small class="ik">Press any key to return to the title</small></div>';OUTT=performance.now()+2500}
 // overlays (wasted / busted / fast travel)
 function showOv(c,h){$('ov').className=c+' on';$('ov').innerHTML=h}function hideOv(){$('ov').className='';$('c').style.filter=''}
@@ -1387,19 +1387,8 @@ function ensureUI(){const h=document.getElementById('h');if(!h||document.getElem
 function news(t){NEWS.unshift({t,d:S?S.day:0});if(NEWS.length>14)NEWS.pop();ensureUI();const e=document.getElementById('nws');if(e){e.innerHTML='<b>NEWS</b><span>'+t+'</span>';e.className='on';clearTimeout(e._t);e._t=setTimeout(()=>e.className='',11000)}}
 function danger(msg,lvl){ensureUI();const e=document.getElementById('dng');e.className='on l'+(lvl||1);e.innerHTML='<b>\u26A0 DANGER ALERT</b><span>'+msg+'</span>';sfx(880,.25,'square',.08);setTimeout(()=>sfx(660,.25,'square',.08),260);clearTimeout(e._t);e._t=setTimeout(()=>e.className='',7000);news(msg)}
 function wxAlert(z){if(z=='storm')danger('Severe storm approaching. Seek shelter.',2);else if(z=='snow')news('Snowfall expected across the city and Alpine Village.');else if(z=='fog')news('Dense fog advisory: drive carefully.');else if(z=='rain')news('Rain moving in from the coast.');else if(z=='clear')news('Skies are clearing. Enjoy the sunshine.')}
-// ---- touch controls
-const TJ={x:0,y:0};let LKID=null,JSID=null;
-function touchOnOld(){return false}
-const TBTN=[['jump','JUMP','Space',1],['sprint','RUN','ShiftLeft',1],['use','USE','KeyE',1],['fire','FIRE','MH',1],['rld','R','KeyR',0],['med','MED','KeyF',0],['phone','PHN','KeyP',0],['map','MAP','KeyM',0],['emo','EMO','KeyG',0],['view','VIEW','KeyU',0],['crch','DUCK','KeyZ',1],['dive','DOWN','KeyC',1],['pause','II','PAUSE',0],['nxt','NEXT','NEXTW',0]];
-function initTouch(){if(document.getElementById('tc'))return;const d=document.createElement('div');d.id='tc';d.innerHTML='<div id="lk"></div><div id="jsb"><i id="jst"></i></div>'+TBTN.map(b=>'<button class="tb t-'+b[0]+'" data-k="'+b[2]+'" data-h="'+b[3]+'">'+b[1]+'</button>').join('');document.body.appendChild(d);
-const jsb=d.querySelector('#jsb'),jst=d.querySelector('#jst'),jset=(cx,cy,x,y)=>{let dx=x-cx,dy=y-cy;const m=Math.hypot(dx,dy),R=45;if(m>R){dx=dx/m*R;dy=dy/m*R}jst.style.transform='translate('+dx+'px,'+dy+'px)';TJ.x=dx/R;TJ.y=dy/R;const drv=S&&S.drv;if(drv){keys.KeyW=TJ.y<-.3;keys.KeyS=TJ.y>.3;keys.KeyA=TJ.x<-.3;keys.KeyD=TJ.x>.3}};
-jsb.addEventListener('pointerdown',e=>{JSID=e.pointerId;jsb.setPointerCapture(e.pointerId);const r=jsb.getBoundingClientRect();jset(r.left+r.width/2,r.top+r.height/2,e.clientX,e.clientY);e.preventDefault()});
-jsb.addEventListener('pointermove',e=>{if(e.pointerId!=JSID)return;const r=jsb.getBoundingClientRect();jset(r.left+r.width/2,r.top+r.height/2,e.clientX,e.clientY)});
-const jend=e=>{if(e.pointerId!=JSID)return;JSID=null;TJ.x=TJ.y=0;jst.style.transform='';keys.KeyW=keys.KeyS=keys.KeyA=keys.KeyD=false};jsb.addEventListener('pointerup',jend);jsb.addEventListener('pointercancel',jend);
-const lk=d.querySelector('#lk');let lx=0,ly=0;lk.addEventListener('pointerdown',e=>{LKID=e.pointerId;lk.setPointerCapture(e.pointerId);lx=e.clientX;ly=e.clientY;e.preventDefault()});
-lk.addEventListener('pointermove',e=>{if(e.pointerId!=LKID)return;yaw-=(e.clientX-lx)*.005*CFG.sens;pit=Math.max(.05,Math.min(1.1,pit+(e.clientY-ly)*.005*CFG.sens*(CFG.invY?-1:1)));lx=e.clientX;ly=e.clientY});lk.addEventListener('pointerup',e=>{if(e.pointerId==LKID)LKID=null});
-d.querySelectorAll('.tb').forEach(b=>{const k=b.dataset.k,hold=b.dataset.h=='1',down=e=>{e.preventDefault();b.classList.add('on');if(k=='MH')MH=1;else if(k=='PAUSE')openPause();else if(k=='NEXTW'){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}else{keys[k]=true;if(!hold)setTimeout(()=>keys[k]=false,140)}},up=e=>{b.classList.remove('on');if(k=='MH')MH=0;else if(hold&&k!='PAUSE'&&k!='NEXTW')keys[k]=false};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up)})}
-if(touchOn()||DEV.touch)document.addEventListener('DOMContentLoaded',()=>{});
+// ---- touch controls: implemented in mobile.js (window.TUI). Tiny stubs keep the old call sites valid.
+const TJ={x:0,y:0};function touchOn(){return !!(window.TUI&&window.TUI.on)}function initTouch(){}
 function deviceInit(){initTouch();ensureUI();if(DEV.mobile&&!S0.noted){S0.noted=1}applyGfx()}
 
 ;
@@ -2507,34 +2496,8 @@ else if(v==3){if(d){c.position.set(p.x,ey+55,p.z+.01);c.lookAt(p.x,ey,p.z)}else{
 else if(v==4){const a=S.t*.18,r=d?16:10;c.position.set(p.x+Math.sin(a)*r,ey+(d?5:4.5),p.z+Math.cos(a)*r);c.lookAt(p.x,ey+(d?1.2:1.5),p.z)}}
 const _vf16=vehFree;vehFree=function(dt){_vf16(dt);gfxApply(false);benchU(dt)};
 
-// ===== TOUCH CONTROLS (rebuilt): floating stick, look pad, context buttons, on-screen toggle =====
-const T2B=[ // id,label,css,kind,payload
-['fire','FIRE','big','hold','MH'],['aim','AIM','mid','hold','ADS'],['jump','JUMP','mid','hold','Space'],['use','USE','mid','tap','KeyE'],['rld','R','sm','tap','KeyR'],['spr','RUN','sm','latch','ShiftLeft'],['blk','BLOCK','sm','hold','KeyZ'],['shv','SHOVE','sm','tap','KeyX'],['nxt','SWAP','sm','act','NEXTW'],['cam','CAM','sm','tap','KeyU'],['map','MAP','sm','tap','KeyM'],['phn','PHONE','sm','tap','KeyP'],['emo','EMO','sm','tap','KeyG'],['dwn','DOWN','sm','hold','KeyC'],
-['gas','GAS','pedal','hold','KeyW'],['brk','BRAKE','pedal','hold','KeyS'],['hnd','HAND','sm','hold','Space'],['ext','EXIT','mid','tap','KeyE'],['up','UP','pedal','hold','Space'],['dn','DOWN','pedal','hold','KeyC']];
-function touchOn(){return CFG.touch=='on'||(CFG.touch=='auto'&&DEV.touch&&DEV.mobile)}
-let T2={sid:null,lid:null,ox:0,oy:0,lx:0,ly:0,ctx:''};
-function initTouch(){if(document.getElementById('t2'))return;const d=document.createElement('div');d.id='t2';
-d.innerHTML='<div id="t2l"></div><div id="t2r"></div><div id="t2s"><b></b><i></i></div>'+T2B.map(b=>'<button class="t2b '+b[2]+' t2-'+b[0]+'" data-id="'+b[0]+'">'+b[1]+'</button>').join('')+'<button id="t2p">II</button>';document.body.appendChild(d);
-const tg=document.createElement('button');tg.id='t2tg';tg.onclick=()=>{CFG.touch=touchOn()?'off':'on';saveCfg();t2Sync(true);notify('Touch controls '+(touchOn()?'ON':'OFF'))};document.body.appendChild(tg);
-const base=d.querySelector('#t2s b'),knob=d.querySelector('#t2s i'),st=d.querySelector('#t2s'),R0=56;
-const setStick=(x,y)=>{let dx=x-T2.ox,dy=y-T2.oy;const m=Math.hypot(dx,dy);if(m>R0){dx=dx/m*R0;dy=dy/m*R0}knob.style.transform='translate('+dx+'px,'+dy+'px)';TJ.x=dx/R0;TJ.y=dy/R0;if(S&&(S.drv||S.fw)){keys.KeyW=TJ.y<-.35;keys.KeyS=TJ.y>.35;keys.KeyA=TJ.x<-.35;keys.KeyD=TJ.x>.35}};
-const L=d.querySelector('#t2l');
-L.addEventListener('pointerdown',e=>{T2.sid=e.pointerId;L.setPointerCapture(e.pointerId);T2.ox=e.clientX;T2.oy=e.clientY;st.style.display='block';st.style.left=(e.clientX-70)+'px';st.style.top=(e.clientY-70)+'px';setStick(e.clientX,e.clientY);e.preventDefault()});
-L.addEventListener('pointermove',e=>{if(e.pointerId==T2.sid)setStick(e.clientX,e.clientY)});
-const send=e=>{if(e.pointerId!=T2.sid)return;T2.sid=null;TJ.x=TJ.y=0;st.style.display='none';keys.KeyW=keys.KeyS=keys.KeyA=keys.KeyD=false};L.addEventListener('pointerup',send);L.addEventListener('pointercancel',send);
-const Rr=d.querySelector('#t2r');
-Rr.addEventListener('pointerdown',e=>{T2.lid=e.pointerId;Rr.setPointerCapture(e.pointerId);T2.lx=e.clientX;T2.ly=e.clientY;e.preventDefault()});
-Rr.addEventListener('pointermove',e=>{if(e.pointerId!=T2.lid)return;const k=.0052*CFG.sens;yaw-=(e.clientX-T2.lx)*k;pit=Math.max(.05,Math.min(1.1,pit+(e.clientY-T2.ly)*k*(CFG.invY?-1:1)));T2.lx=e.clientX;T2.ly=e.clientY});
-const lend=e=>{if(e.pointerId==T2.lid)T2.lid=null};Rr.addEventListener('pointerup',lend);Rr.addEventListener('pointercancel',lend);
-d.querySelector('#t2p').addEventListener('pointerdown',e=>{e.preventDefault();openPause()});
-d.querySelectorAll('.t2b').forEach(b=>{const def=T2B.find(x=>x[0]==b.dataset.id),kind=def[3],k=def[4];
-const down=e=>{e.preventDefault();b.classList.add('on');if(k=='MH')MH=1;else if(k=='ADS')CBT.adsK=true;else if(k=='NEXTW'){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}else if(kind=='latch'){b._l=!b._l;keys[k]=b._l;b.classList.toggle('lat',b._l)}else{keys[k]=true;if(kind=='tap')setTimeout(()=>{keys[k]=false;b.classList.remove('on')},160)}};
-const up=e=>{if(kind=='tap'||kind=='latch')return b.classList.contains('lat')?0:(kind=='latch'?b.classList.remove('on'):0);b.classList.remove('on');if(k=='MH')MH=0;else if(k=='ADS')CBT.adsK=false;else if(kind=='hold')keys[k]=false};
-b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up)});
-d.addEventListener('contextmenu',e=>e.preventDefault())}
-function t2Sync(force){const on=touchOn(),tg=document.getElementById('t2tg');document.body.classList.toggle('touchon',on);if(tg){tg.textContent=on?'TOUCH: ON':'TOUCH: OFF';tg.style.display=(DEV.touch||CFG.touch=='on')?'block':'none';tg.classList.toggle('off',!on)}
-const d=document.getElementById('t2');if(!d||!on&&!force)return;const c=S&&S.ph==4?(S.drv?(S.drv.ty=='heli'||S.drv.ty=='plane'||S.drv.ty=='balloon'?'fly':'veh'):'foot'):(S&&S.ph?'arena':'');if(c!==T2.ctx){T2.ctx=c;d.className='c-'+c}}
-const _vf17=vehFree;vehFree=function(dt){_vf17(dt);if((S.t*4|0)!==T2.q){T2.q=S.t*4|0;t2Sync(false)}};
+// (old touch layer removed: see mobile.js / TUI)
+function t2Sync(){}
 
 // ===== SKY: new sun (disc + corona), moon (craters, real phases from the calendar), shader clouds =====
 const SKYFS=`varying vec3 vp;

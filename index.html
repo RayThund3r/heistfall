@@ -1,17 +1,68 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>HEISTFALL</title>
-<link rel="stylesheet" href="style.css"></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<title>HEISTFALL</title>
+<meta name="theme-color" content="#05070d">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Heistfall">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="mobile.css">
+<script>
+/* Device profile: computed BEFORE the game starts so the renderer can be created correctly. */
+(function(){
+  var ua=navigator.userAgent||'',nav=navigator;
+  var ios=/iPhone|iPad|iPod/.test(ua)||(nav.platform==='MacIntel'&&nav.maxTouchPoints>1);
+  var android=/Android/i.test(ua);
+  var coarse=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+  var touch=(nav.maxTouchPoints||0)>0||'ontouchstart' in window;
+  var mobile=ios||android||/Mobile/i.test(ua)||(touch&&coarse&&Math.min(screen.width,screen.height)<900);
+  var cores=nav.hardwareConcurrency||4,mem=nav.deviceMemory||(mobile?3:8);
+  var q=location.search||'';
+  window.HF={ios:ios,android:android,mobile:mobile,touch:touch,coarse:coarse,cores:cores,mem:mem,
+    lowEnd:mobile&&(cores<=4||mem<=3),
+    standalone:!!(nav.standalone||(window.matchMedia&&matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches)),
+    noBatch:/[?&]nobatch\b/.test(q),forceTouch:/[?&]touch\b/.test(q),debug:/[?&]debug\b/.test(q)};
+  document.documentElement.classList.add(mobile?'is-mobile':'is-desktop');
+  if(ios)document.documentElement.classList.add('is-ios');
+})();
+</script>
+</head>
+<body>
 <canvas id="c"></canvas><div id="fx"></div>
 <div id="h"><div class="bar" id="hp" data-l="HEALTH"><i></i></div><div class="bar" id="al" data-l="ALERT"><i></i></div><div class="bar" id="ab" data-l="PULSE"><i></i></div><div class="bar" id="o2" data-l="OXYGEN"><i></i></div><div class="bar" id="ar" data-l="ARMOR"><i></i></div><div class="bar" id="hu" data-l="HUNGER"><i></i></div><div class="bar" id="th" data-l="THIRST"><i></i></div><div class="bar" id="jf" data-l="JETPACK"><i></i></div><div id="cmp"></div>
 <div id="tp"></div><canvas id="mm" class="mm" width="180" height="180"></canvas><div id="bn"></div><div id="cm"></div>
 <div id="hl"><kbd>H</kbd> hold for controls</div><div id="help"><b>CONTROLS</b><div class="g"><span>Move</span><kbd>WASD</kbd><span>Look</span><kbd>Mouse</kbd><span>Jump / Swim up</span><kbd>Space</kbd><span>Dash / Nitro</span><kbd>Shift</kbd><span>Interact / Enter / Exit</span><kbd>E</kbd><span>Punch</span><kbd>LMB</kbd><span>Shoot</span><kbd>RMB / G</kbd><span>Reload</span><kbd>R</kbd><span>Dive</span><kbd>C</kbd><span>Phone</span><kbd>P</kbd><span>Map</span><kbd>M</kbd><span>Emote</span><kbd>V</kbd><span>Pulse / Barricade</span><kbd>F / Q</kbd><span>Drive</span><kbd>WASD + Space brake</kbd><span>Pause</span><kbd>Esc</kbd></div></div><div id="dlg"></div><div id="ph"></div><div id="nt"></div></div>
-<div id="cb"><i></i><i></i><u>SPACE · next shot</u></div><div id="sub"></div><div id="pm"></div><div id="ov"></div><div id="ft"></div><div id="m"></div>
+<div id="cb"><i></i><i></i><u>SPACE · next shot</u></div><div id="sub"></div><div id="pm"></div><div id="ov"></div><div id="ft"></div>
+<div id="m" style="display:flex"><div class="boot"><b>HEIST<span>FALL</span></b><i></i><small id="bootmsg">LOADING</small></div></div>
 <script>
-const LIBS=[["three.min.js", "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"], ["CopyShader.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"], ["LuminosityHighPassShader.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"], ["EffectComposer.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"], ["MaskPass.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"], ["ShaderPass.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"], ["RenderPass.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"], ["UnrealBloomPass.js", "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"]];
-const ld=u=>new Promise(r=>{const e=document.createElement('script');e.src=u;e.onload=()=>r(1);e.onerror=()=>r(0);document.head.appendChild(e)});
-function fail(t){const m=document.getElementById('m');m.style.display='flex';m.innerHTML='<h2>HEISTFALL could not start</h2><pre style="white-space:pre-wrap;max-width:90%;text-align:left">'+t+'</pre>'}
-addEventListener('error',e=>{if(window.__booted)return;fail(e.message+' ('+(e.filename||'')+':'+(e.lineno||'?')+')')});
-(async()=>{for(const [f,u] of LIBS){if(!await ld('libs/'+f)&&!await ld(u)&&f=='three.min.js'){fail('three.min.js not found. Put it in the libs folder (run get_libs.py) or connect to the internet.');return}}
-if(!await ld('game.js')){fail('Missing game file: game.js (it must sit next to index.html)');return}
-window.__booted=1})();
+/* ---------- loader ----------
+   Helper scripts download IN PARALLEL but execute IN ORDER (async=false), so a phone on a slow
+   connection no longer waits for 8 sequential round-trips. libs/ is used if it exists, else the CDN. */
+var CDN=[["three.min.js","https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"],["CopyShader.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"],["LuminosityHighPassShader.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"],["EffectComposer.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"],["MaskPass.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"],["ShaderPass.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"],["RenderPass.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"],["UnrealBloomPass.js","https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"]];
+function fail(t){var m=document.getElementById('m');m.style.display='flex';m.className='';m.innerHTML='<h2>HEISTFALL could not start</h2><pre style="white-space:pre-wrap;max-width:90%;text-align:left;font-size:13px">'+String(t).replace(/</g,'&lt;')+'</pre><button onclick="location.reload()">Reload</button>'}
+addEventListener('error',function(e){if(window.__booted)return;fail((e.message||'error')+' ('+(e.filename||'').split('/').pop()+':'+(e.lineno||'?')+')')});
+function bootSay(t){var e=document.getElementById('bootmsg');if(e)e.textContent=t}
+function load(u){return new Promise(function(res){var e=document.createElement('script');e.src=u;e.async=false;e.onload=function(){res(1)};e.onerror=function(){res(0)};document.head.appendChild(e)})}
+(async function(){
+  bootSay('LOADING ENGINE');
+  var useLocal=await load('libs/three.min.js');
+  if(!useLocal&&!await load(CDN[0][1])){fail('three.min.js could not be loaded.\nPut it in the libs folder (run get_libs.py) or connect to the internet.');return}
+  await Promise.all(CDN.slice(1).map(function(a){return load(useLocal?('libs/'+a[0]):a[1]).then(function(ok){return(ok||!useLocal)?ok:load(a[1])})}));
+  bootSay('STARTING');
+  if(!await load('game.js?v=2')){fail('Missing game file: game.js (it must sit next to index.html)');return}
+  window.__booted=1; /* from here on an error in an optional layer can never replace the game with the error screen */
+  await load('perf.js?v=2');   /* performance layer */
+  await load('mobile.js?v=2'); /* touch + mobile UI layer */
+})();
 </script>
-</body></html>
+</body>
+</html>
