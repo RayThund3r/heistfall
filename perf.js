@@ -16,8 +16,9 @@ const log=(...a)=>{PERF.log.push(a.join(' '));if(HF.debug)console.log('[perf]',.
 /* ================= 1. graphics profile ================= */
 /* one-time migration so existing saved settings (lamps=0 meant "ALL lights on High") pick up the new budget */
 try{
-  if((CFG.hfPerf||0)<2){
-    CFG.hfPerf=2;
+  if((CFG.hfPerf||0)<3){
+    CFG.hfPerf=3;
+    if(!MOB&&CFG.fpsCap===30)CFG.fpsCap=0;   // old auto-detect capped desktops at 30 fps when the browser hid the GPU name
     if(MOB){CFG.resScale=1;CFG.part=Math.min(CFG.part||1,.6);if(!CFG.fpsCap)CFG.fpsCap=HF.lowEnd?30:60;if(CFG.gfx>1)CFG.gfx=1;CFG.bloomOn=false}
     CFG.lamps=0;
     if(typeof saveCfg==='function')saveCfg();
@@ -55,7 +56,7 @@ let frameNo=0;
 function target(){const cap=CFG.fpsCap;if(cap)return 1000/cap;return 1000/(D.refresh||60)}
 function sampleRefresh(ms){ // refresh rate = fastest typical frame interval seen early on
   if(D.refresh||D.samples.length<90)return;const a=D.samples.slice().sort((x,y)=>x-y),m=a[Math.floor(a.length*.2)];
-  const hz=1000/m;D.refresh=hz>125?144:hz>100?120:hz>80?90:hz>66?72:60;log('refresh≈',D.refresh)}
+  const hz=1000/m;D.refresh=hz>125?144:hz>100?120:hz>80?90:hz>66?72:60;PERF.refresh=D.refresh;log('refresh≈',D.refresh)}
 const _fwOrig=window.frameWatch;
 window.frameWatch=function(dt){
   frameNo++;PERF.frame=frameNo;
@@ -105,7 +106,7 @@ const CELL=MOB?64:48,MAXV=60000;
 const B={job:null,fired:false,units:[],entries:[],groups:[],matPairs:[],cursor:0,gcursor:0,mcursor:0,BW:null,t0:0};
 function bReset(){ // new world: forget everything (the old meshes are discarded by the game itself)
   if(B.BW&&B.BW.parent)B.BW.parent.remove(B.BW);
-  Object.assign(B,{job:null,fired:false,units:[],entries:[],groups:[],matPairs:[],cursor:0,gcursor:0,mcursor:0,BW:null,t0:0});
+  Object.assign(B,{layered:false,job:null,fired:false,units:[],entries:[],groups:[],matPairs:[],cursor:0,gcursor:0,mcursor:0,BW:null,t0:0});
   PERF.batch.state='idle';
 }
 const _spOrig=window.setPhase;
@@ -133,7 +134,7 @@ function okMesh(m){
 }
 function matKey(m,cs,rs){
   const t=mtype(m);
-  return [t,cs?1:0,rs?1:0,t==='S'?(m.roughness+'|'+m.metalness+'|'+(m.flatShading?1:0)):'',m.emissive?m.emissive.getHex()+'|'+m.emissiveIntensity:'',m.map?m.map.uuid:'',m.emissiveMap?m.emissiveMap.uuid:'',m.side,m.fog===false?0:1,m.envMapIntensity===undefined?'':m.envMapIntensity].join('~');
+  return [t,cs?1:0,rs?1:0,t==='S'?(m.roughness+'|'+m.metalness+'|'+(m.flatShading?1:0)):'',m.emissive?m.emissive.getHex()+'|'+m.emissiveIntensity:'',m.map?m.map.uuid:'',m.emissiveMap?m.emissiveMap.uuid:'',m.side,m.fog===false?0:1,m.envMapIntensity===undefined?'':m.envMapIntensity,m.polygonOffset?(m.polygonOffsetFactor+'/'+m.polygonOffsetUnits):''].join('~');
 }
 function snapObj(o,a,i){const p=o.position,r=o.rotation,s=o.scale;a[i]=p.x;a[i+1]=p.y;a[i+2]=p.z;a[i+3]=r.x;a[i+4]=r.y;a[i+5]=r.z;a[i+6]=s.x;a[i+7]=s.y;a[i+8]=s.z;a[i+9]=o.visible?1:0}
 function sameObj(o,a,i){const p=o.position,r=o.rotation,s=o.scale;return a[i]===p.x&&a[i+1]===p.y&&a[i+2]===p.z&&a[i+3]===r.x&&a[i+4]===r.y&&a[i+5]===r.z&&a[i+6]===s.x&&a[i+7]===s.y&&a[i+8]===s.z&&a[i+9]===(o.visible?1:0)}
@@ -159,7 +160,7 @@ function* batchJob(){
   const msnap=new Map();
   const mats=(a,k)=>{const m=a.material;if(!msnap.has(m))msnap.set(m,[m.color.getHex(),m.emissive?m.emissive.getHex():0,m.emissiveIntensity,m.opacity,m.roughness,m.metalness]);};
   cand.forEach((c,k)=>{snapObj(c.m,sn,k*10);mats(c.m)});grp.forEach((o,k)=>snapObj(o,gs,k*10));
-  const tEnd=now()+2500;while(now()<tEnd)yield;
+  const tEnd=now()+1500;while(now()<tEnd)yield;
   stats.state='baking';
   const badG=new Set();grp.forEach((o,k)=>{if(!sameObj(o,gs,k*10)||!o.visible)badG.add(k)});
   const keep=[];
@@ -181,6 +182,7 @@ function* batchJob(){
   const mkMat=(src,key)=>{
     let mm=mmCache.get(key);if(mm)return mm;
     const o={vertexColors:true,color:0xffffff,side:src.side,fog:src.fog!==false};
+    if(src.polygonOffset){o.polygonOffset=true;o.polygonOffsetFactor=src.polygonOffsetFactor;o.polygonOffsetUnits=src.polygonOffsetUnits}
     if(src.map)o.map=src.map;
     if(src.emissive&&(src.emissive.getHex()||src.emissiveMap)){o.emissive=src.emissive.clone();o.emissiveIntensity=src.emissiveIntensity;if(src.emissiveMap)o.emissiveMap=src.emissiveMap}
     const t=mtype(src);
@@ -244,6 +246,7 @@ function* batchJob(){
   }
   stats.units=nUnits+furnUnits;stats.meshesAfter=total-removed+B.units.length;
   stats.ms=Math.round(now()-t0);stats.removed=removed;stats.state='active';
+  try{G('R').compile(G('sc'),G('cam'))}catch(e){}   // build every shader program now (spawn hitch) instead of mid-game stutters
   log('static batch: removed',removed,'meshes ->',nUnits,'+',furnUnits,'furniture batches');
   PERF.dyn=G('DYN');
 }
@@ -308,11 +311,39 @@ function monitor(){
     else if(s[0]!==mo.color.getHex()||s[3]!==mo.opacity){for(const u of p.units)revert(u);s[0]=mo.color.getHex();s[3]=mo.opacity}
   }B.mcursor=mi;
 }
+/* ---- ground layering: flat ground-level surfaces (grass, asphalt, parks, runways, lane decals) sit only 0.01-0.03 units apart.
+   Beyond ~150 m the depth buffer cannot tell them apart, so grass "flickers through" roads while you walk. Each distinct height gets its own
+   polygon-offset rank (small, fixed, in depth-buffer units), so the higher surface always wins at every distance. */
+function groundLayers(){
+  const st=PERF.ground={layers:0,meshes:0};
+  W.updateMatrixWorld(true);
+  const flats=[],box=new THREE.Box3();
+  W.traverse(o=>{
+    if(!o.isMesh||o.isInstancedMesh||!o.visible)return;
+    const m=o.material;if(!m||Array.isArray(m)||m.transparent||m.isShaderMaterial||m.blending!==1||!m.isMaterial)return;
+    const y=o.matrixWorld.elements[13];if(y<-.4||y>.7)return;
+    const g=o.geometry;if(!g||!g.attributes||!g.attributes.position)return;
+    if(!g.boundingBox)g.computeBoundingBox();
+    box.copy(g.boundingBox).applyMatrix4(o.matrixWorld);
+    const h=box.max.y-box.min.y;if(h>.12||box.max.y>.6||box.max.y<-.35)return;
+    const wd=Math.max(box.max.x-box.min.x,box.max.z-box.min.z);if(wd<1.5)return;   // ignore tiny bits
+    flats.push({m,top:box.max.y});
+  });
+  if(!flats.length)return;
+  flats.sort((a,b)=>a.top-b.top);
+  const ranks=[];let rank=-1,last=-9;
+  for(const f of flats){if(f.top-last>.004){rank++;last=f.top}f.rank=Math.min(rank,9)}
+  const done=new Set();
+  for(const f of flats){const m=f.m;if(done.has(m)){m.polygonOffsetFactor=Math.min(m.polygonOffsetFactor,-(1+f.rank));m.polygonOffsetUnits=Math.min(m.polygonOffsetUnits,-(2+f.rank*3));continue}
+    done.add(m);m.polygonOffset=true;m.polygonOffsetFactor=-(1+f.rank);m.polygonOffsetUnits=-(2+f.rank*3);m.needsUpdate=true}
+  st.layers=rank+1;st.meshes=flats.length;log('ground layers:',st.layers,'over',st.meshes,'surfaces');
+}
 function batchTick(){
-  if(HF.noBatch||CFG.batch===false){return}
   const S=G('S'),run=G('run');
   if(!run||!S||S.ph!==4||G('mode')==='commander'){return}
-  if(!B.fired){if(S.t>2.5&&!G('PM')){B.fired=true;B.job=batchJob();B.t0=now()}return}
+  if(!B.layered&&S.t>.6){B.layered=true;try{groundLayers()}catch(e){console.error('ground layering failed',e)}}
+  if(HF.noBatch||CFG.batch===false)return;
+  if(!B.fired){if(S.t>1.0&&!G('PM')){B.fired=true;B.job=batchJob();B.t0=now()}return}
   if(B.job){
     const t=now();
     try{while(now()-t<5){const r=B.job.next();if(r.done){B.job=null;break}}}
@@ -323,7 +354,7 @@ function batchTick(){
 }
 function safeRestoreAll(){try{for(const u of B.units)revert(u)}catch(e){}}
 PERF.restore=safeRestoreAll;
-PERF._test={job:()=>{B.fired=true;return batchJob()},monitor:()=>monitor(),state:()=>B,markActive:()=>{}};
+PERF._test={layers:()=>groundLayers(),job:()=>{B.fired=true;return batchJob()},monitor:()=>monitor(),state:()=>B,markActive:()=>{}};
 
 log('perf layer ready',MOB?'(mobile profile)':'(desktop profile)');
 window.applyGfx();

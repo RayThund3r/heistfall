@@ -159,44 +159,7 @@ kbd{background:#1a2030;border:1px solid #fff4;border-bottom-width:3px;border-rad
 #h.wdm #xh,#h.wdm #hmk,#h.wdm #scope,#h.wdm #dmgv,#h.wdm #dnr{display:none!important}
 
 /* touch controls v2 */
-#t2,#t2tg{display:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;-webkit-tap-highlight-color:transparent}
-body.touchon #t2{display:block;position:fixed;inset:0;z-index:6;pointer-events:none}
-#t2tg{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9;background:#0b1424cc;color:#8fe6a8;border:1px solid #fff3;border-radius:14px;padding:5px 12px;font:700 11px sans-serif;letter-spacing:.12em;touch-action:manipulation}
-#t2tg.off{color:#ff9aa5}
-#t2l{position:absolute;left:0;top:0;width:48%;height:100%;pointer-events:auto}
-#t2r{position:absolute;right:0;top:0;width:52%;height:100%;pointer-events:auto}
-#t2s{position:fixed;display:none;width:140px;height:140px}
-#t2s b{position:absolute;inset:0;border-radius:50%;background:#ffffff14;border:2px solid #ffffff55}
-#t2s i{position:absolute;left:44px;top:44px;width:52px;height:52px;border-radius:50%;background:#ffffffaa;box-shadow:0 0 12px #000a}
-.t2b{position:absolute;pointer-events:auto;border-radius:50%;border:2px solid #ffffff66;background:#0b1424aa;color:#fff;font:700 11px sans-serif;letter-spacing:.06em;display:none;align-items:center;justify-content:center;touch-action:none;padding:0}
-.t2b.on{background:#33ccffcc;color:#000}.t2b.lat{background:#ffcf33cc;color:#000}
-.t2b.big{width:92px;height:92px;font-size:14px;background:#d6283acc}.t2b.mid{width:68px;height:68px}.t2b.sm{width:50px;height:50px;font-size:10px}.t2b.pedal{width:76px;height:96px;border-radius:16px}
-#t2p{position:absolute;pointer-events:auto;top:calc(8px + env(safe-area-inset-top,0px));right:calc(8px + env(safe-area-inset-right,0px));width:44px;height:44px;border-radius:50%;background:#0b1424aa;color:#fff;border:2px solid #fff6;font-weight:800;touch-action:none}
 /* on foot */
-#t2.c-foot .t2-fire,#t2.c-foot .t2-aim,#t2.c-foot .t2-jump,#t2.c-foot .t2-use,#t2.c-foot .t2-rld,#t2.c-foot .t2-spr,#t2.c-foot .t2-blk,#t2.c-foot .t2-shv,#t2.c-foot .t2-nxt,#t2.c-foot .t2-cam,#t2.c-foot .t2-map,#t2.c-foot .t2-phn,#t2.c-foot .t2-emo,#t2.c-foot .t2-dwn,
-#t2.c-arena .t2-fire,#t2.c-arena .t2-jump,#t2.c-arena .t2-use,#t2.c-arena .t2-spr,#t2.c-arena .t2-nxt,
-#t2.c-veh .t2-gas,#t2.c-veh .t2-brk,#t2.c-veh .t2-hnd,#t2.c-veh .t2-ext,#t2.c-veh .t2-cam,#t2.c-veh .t2-map,
-#t2.c-fly .t2-up,#t2.c-fly .t2-dn,#t2.c-fly .t2-gas,#t2.c-fly .t2-brk,#t2.c-fly .t2-ext,#t2.c-fly .t2-cam,#t2.c-fly .t2-map{display:flex}
-.t2-fire{right:calc(26px + env(safe-area-inset-right,0px));bottom:calc(120px + env(safe-area-inset-bottom,0px))}
-.t2-jump{right:calc(130px + env(safe-area-inset-right,0px));bottom:calc(40px + env(safe-area-inset-bottom,0px))}
-.t2-aim{right:calc(140px + env(safe-area-inset-right,0px));bottom:calc(150px + env(safe-area-inset-bottom,0px))}
-.t2-use{right:calc(30px + env(safe-area-inset-right,0px));bottom:calc(28px + env(safe-area-inset-bottom,0px))}
-.t2-rld{right:calc(218px + env(safe-area-inset-right,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px))}
-.t2-spr{right:calc(218px + env(safe-area-inset-right,0px));bottom:calc(118px + env(safe-area-inset-bottom,0px))}
-.t2-blk{right:calc(218px + env(safe-area-inset-right,0px));bottom:calc(176px + env(safe-area-inset-bottom,0px))}
-.t2-shv{right:calc(30px + env(safe-area-inset-right,0px));bottom:calc(230px + env(safe-area-inset-bottom,0px))}
-.t2-nxt{right:calc(90px + env(safe-area-inset-right,0px));bottom:calc(230px + env(safe-area-inset-bottom,0px))}
-.t2-dwn{right:calc(218px + env(safe-area-inset-right,0px));bottom:calc(234px + env(safe-area-inset-bottom,0px))}
-.t2-cam{left:calc(10px + env(safe-area-inset-left,0px));top:calc(120px + env(safe-area-inset-top,0px))}
-.t2-map{left:calc(66px + env(safe-area-inset-left,0px));top:calc(120px + env(safe-area-inset-top,0px))}
-.t2-phn{left:calc(122px + env(safe-area-inset-left,0px));top:calc(120px + env(safe-area-inset-top,0px))}
-.t2-emo{left:calc(178px + env(safe-area-inset-left,0px));top:calc(120px + env(safe-area-inset-top,0px))}
-.t2-gas,.t2-up{right:calc(24px + env(safe-area-inset-right,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px))}
-.t2-brk,.t2-dn{right:calc(24px + env(safe-area-inset-right,0px));bottom:calc(30px + env(safe-area-inset-bottom,0px))}
-.t2-hnd{right:calc(110px + env(safe-area-inset-right,0px));bottom:calc(30px + env(safe-area-inset-bottom,0px))}
-.t2-ext{right:calc(110px + env(safe-area-inset-right,0px));bottom:calc(110px + env(safe-area-inset-bottom,0px))}
-#t2.c-fly .t2-gas{right:calc(110px + env(safe-area-inset-right,0px));bottom:calc(140px + env(safe-area-inset-bottom,0px));height:76px}
-#t2.c-fly .t2-brk{right:calc(110px + env(safe-area-inset-right,0px));bottom:calc(60px + env(safe-area-inset-bottom,0px));height:76px;display:none}
 @media (pointer:coarse){body.touchon #h{--hs:.9}}
 
 /* alien contracts */

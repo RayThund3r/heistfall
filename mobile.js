@@ -22,11 +22,19 @@ function sync(){
   const on=wantTouch();
   if(on!==TUI.on){TUI.on=on;document.body.classList.toggle('touchon',on);if(!on)releaseAll();}
   if(!root)return;
+  applyPrefs();
   const c=context();
   const mo=!!(g('S')&&g('S').bm);
   root.classList.toggle('mapopen',mo&&on);
   if(c!==TUI.ctx){TUI.ctx=c;if(c!=='foot'){TUI.tray=false;tray.classList.remove('open')}releaseHeld();root.className=root.className.replace(/\bc-\S+/g,'').trim()+' c-'+c;if(mo)root.classList.add('mapopen')}
   rot();
+}
+/* ---------- control preferences (Phone > Settings > Controls) ---------- */
+let prefKey='';
+function applyPrefs(){
+  const C=g('CFG')||{},k=[C.tScale,C.tOp,C.tLeft,C.tLabels,C.tFixed].join('|');if(k===prefKey)return;prefKey=k;
+  root.style.setProperty('--ts',String(Math.max(.7,Math.min(1.5,C.tScale||1))));root.style.setProperty('--to',String(Math.max(.25,Math.min(1,C.tOp==null?.78:C.tOp))));
+  root.classList.toggle('lefty',!!C.tLeft);root.classList.toggle('nolabels',C.tLabels===false);
 }
 /* ---------- which control set? ---------- */
 function context(){
@@ -58,12 +66,45 @@ const B=[ // id,label,size,kind,payload
  ['wplace','BUILD','big','tap','Space'],['wrot','ROT','xs','tap','KeyR'],['wsell','SELL','xs','tap','KeyX'],['wgo','WAVE','sm','tap','KeyG']];
 const TRAY=[['swap','SWAP','act','swap'],['blk','BLOCK','hold','KeyZ'],['shv','SHOVE','tap','KeyX'],['med','MED','tap','KeyF'],['phn','PHONE','act','phone'],['emo','EMOTE','tap','KeyG'],['dive','DIVE','hold','KeyC'],['sit','SIT','tap','KeyN'],['view','VIEW','tap','KeyU']];
 
+/* ---------- icons (stroke, 24x24) ---------- */
+const IC={
+ fire:'<circle cx="12" cy="12" r="6.5"/><path d="M12 2.5v5M12 16.5v5M2.5 12h5M16.5 12h5"/>',
+ aim:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
+ jump:'<path d="M6 12.5l6-6 6 6"/><path d="M6 18.5l6-6 6 6"/>',
+ use:'<path d="M9 11V5.5a1.8 1.8 0 013.6 0V11m0-1.4a1.8 1.8 0 013.6 0v1.6m0-.6a1.8 1.8 0 013.4.8V14a7 7 0 01-7 7h-.6a6 6 0 01-4.7-2.3L4.5 14.8a1.8 1.8 0 012.7-2.3L9 14"/>',
+ rld:'<path d="M20 12a8 8 0 11-2.6-5.9"/><path d="M20 4v5h-5"/>',
+ run:'<path d="M6 6l6 6-6 6"/><path d="M13 6l6 6-6 6"/>',
+ more:'<circle cx="6" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="18" cy="12" r="1.7" fill="currentColor"/>',
+ pls:'<circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M7.5 7.5a6.4 6.4 0 000 9M16.5 7.5a6.4 6.4 0 010 9M4.5 4.5a10.6 10.6 0 000 15M19.5 4.5a10.6 10.6 0 010 15"/>',
+ dash:'<path d="M4 12h13"/><path d="M12.5 6.5L18 12l-5.5 5.5"/><path d="M20.5 7v10"/>',
+ bar:'<rect x="3.5" y="5" width="17" height="14" rx="1.5"/><path d="M3.5 12h17M9 5v7M15 12v7"/>',
+ gas:'<path d="M8 20l2.2-15h3.6L16 20z"/><path d="M9.5 12h5"/>',
+ brk:'<rect x="5" y="5" width="14" height="14" rx="3"/>',
+ hnd:'<path d="M5 18c0-6 4-10 10-10h4"/><path d="M15 4l4 4-4 4"/>',
+ nit:'<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+ ext:'<path d="M10 4H5.5v16H10"/><path d="M14 8l4 4-4 4M18 12H9"/>',
+ cam:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ up:'<path d="M6 15l6-6 6 6"/>',dn:'<path d="M6 9l6 6 6-6"/>',
+ pause:'<path d="M9 6v12M15 6v12"/>',
+ mapb:'<path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+ mapx:'<path d="M6 6l12 12M18 6L6 18"/>',
+ wplace:'<path d="M12 5v14M5 12h14"/>',wrot:'<path d="M20 12a8 8 0 11-2.6-5.9"/><path d="M20 4v5h-5"/>',
+ wsell:'<path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/>',wgo:'<path d="M8 5l11 7-11 7z"/>',
+ swap:'<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>',
+ blk:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+ shv:'<path d="M5 12h9M11 7l5 5-5 5"/><path d="M19 6v12"/>',
+ med:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>',
+ phn:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
+ emo:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 007 0"/><circle cx="9" cy="10" r=".8" fill="currentColor"/><circle cx="15" cy="10" r=".8" fill="currentColor"/>',
+ dive:'<path d="M12 3v11M7.5 10l4.5 4.5 4.5-4.5"/><path d="M3.5 19c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 5 0"/>',
+ sit:'<path d="M7 4v8h9v8M7 12v8"/>',view:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'};
+const ico=n=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';
 function build(){
   if($('tui'))return;
   root=document.createElement('div');root.id='tui';root.className='c-none';
   root.innerHTML='<div class="zone zl"></div><div class="zone zr"></div><div class="stick"><b></b><i></i></div><div class="hint">MOVE</div><div class="tapcont">TAP TO CONTINUE</div>'+
-    B.map(b=>'<button class="tb '+b[2]+' t-'+b[0]+'" data-id="'+b[0]+'">'+b[1]+'<small></small></button>').join('')+
-    '<div class="tray">'+TRAY.map(b=>'<button class="tb t-'+b[0]+'" data-tray="'+b[0]+'">'+b[1]+'</button>').join('')+'</div>';
+    B.map(b=>'<button class="tb '+b[2]+' t-'+b[0]+'" data-id="'+b[0]+'" aria-label="'+b[1]+'">'+ico(b[0])+'<span class="lb">'+b[1]+'</span><small></small></button>').join('')+
+    '<div class="tray">'+TRAY.map(b=>'<button class="tb t-'+b[0]+'" data-tray="'+b[0]+'" aria-label="'+b[1]+'">'+ico(b[0])+'<span class="lb">'+b[1]+'</span></button>').join('')+'</div>';
   document.body.appendChild(root);
   tray=root.querySelector('.tray');stickEl=root.querySelector('.stick');stickKnob=stickEl.querySelector('i');hint=root.querySelector('.hint');
   wireZones();
@@ -129,6 +170,7 @@ function wireZones(){
   zl.addEventListener('pointerdown',e=>{
     e.preventDefault();if(st.id!==null)return;st.id=e.pointerId;try{zl.setPointerCapture(e.pointerId)}catch(_){}
     st.ox=e.clientX;st.oy=e.clientY;st.full=0;hint.classList.add('off');TUI.usedStick=1;
+    if((g('CFG')||{}).tFixed){const h=hint.getBoundingClientRect();st.ox=h.left+h.width/2;st.oy=h.top+h.height/2}
     stickEl.style.display='block';stickEl.style.left=st.ox+'px';stickEl.style.top=st.oy+'px';stickSet(e.clientX,e.clientY)});
   zl.addEventListener('pointermove',e=>{if(e.pointerId===st.id){e.preventDefault();stickSet(e.clientX,e.clientY)}});
   const up=e=>{if(e.pointerId===st.id)stickEnd()};zl.addEventListener('pointerup',up);zl.addEventListener('pointercancel',up);zl.addEventListener('lostpointercapture',up);
@@ -144,7 +186,7 @@ function wireZones(){
 }
 function wardenPt(e){const W=g('WM');if(W){W.x=e.clientX;W.y=e.clientY;W.t=performance.now()}}
 function look(dx,dy,m){
-  const C=g('CFG')||{},sens=(C.sens||1),ads=(g('CBT')||{}).adsK?.62:1;
+  const C=g('CFG')||{},sens=(C.sens||1)*(C.tSens||1),ads=(g('CBT')||{}).adsK?.62:1;
   const k=.0054*sens*ads*m*(1+Math.min(.5,Math.hypot(dx,dy)/60));   // slight acceleration for fast flicks
   try{lookBy(dx*k,dy*k*(C.invY?-1:1))}catch(e){}
 }
@@ -250,6 +292,11 @@ function init(){
   rotEl.querySelector('button').onclick=()=>{TUI.portraitOK=true;rot()};
   tipEl=document.createElement('div');tipEl.id='tip';document.body.appendChild(tipEl);
   watchText();mapTaps();
+  /* A tap on the title / end screen shows the home menu on pointerdown; the browser's follow-up click would then land on whichever
+     menu button is under the finger and silently activate it. Swallow that click (and its mouse twins) for a moment. */
+  TUI.swallow=0;
+  document.addEventListener('pointerdown',e=>{const m=$('m');if(m&&(m.classList.contains('intro')||m.classList.contains('outro')))TUI.swallow=performance.now()+650},true);
+  ['mousedown','mouseup','click','touchend'].forEach(t=>document.addEventListener(t,e=>{if(performance.now()<TUI.swallow){e.stopImmediatePropagation();if(t==='click'||t==='mouseup'||t==='mousedown')e.preventDefault()}},true));
   document.addEventListener('pointerdown',firstGesture,{capture:true,passive:true});
   document.addEventListener('touchend',audioUnlock,{passive:true});document.addEventListener('click',audioUnlock);
   /* a laptop with a touchscreen: go back to mouse/keyboard UI as soon as the mouse is used */
