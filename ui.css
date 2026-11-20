@@ -137,3 +137,8 @@ body.touchon #cm{bottom:calc(44px + env(safe-area-inset-bottom)) !important}
 }
 body.touchon #tut{font-size:11px!important;padding:6px 10px!important}body.touchon #tut b{font-size:12px!important;margin-bottom:4px}body.touchon #tut small{font-size:9px!important}
 body.touchon #nt{bottom:calc(128px + env(safe-area-inset-bottom))!important}
+
+/* ---------- performance overlay ---------- */
+#perfhud{position:fixed;left:8px;bottom:8px;z-index:90;display:none;background:rgba(5,7,13,.82);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;color:#cfe8ff;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;max-width:min(92vw,460px);pointer-events:auto}
+#perfhud pre{margin:0 0 6px;white-space:pre-wrap;font:inherit}
+#perfhud button{min-width:0;min-height:0;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:11px;cursor:pointer}

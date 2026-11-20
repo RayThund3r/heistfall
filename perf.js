@@ -72,13 +72,16 @@ window.frameWatch=function(dt){
     if(run&&!PM&&!document.hidden){
       if(!D.runSince)D.runSince=now();
       const ms=dt*1000;D.samples.push(ms);if(D.samples.length>120)D.samples.shift();sampleRefresh(ms);
-      if(CFG.autoQ!==false&&now()-D.runSince>4000&&D.samples.length>=90&&frameNo%60===0){
-        const avg=D.samples.reduce((a,b)=>a+b,0)/D.samples.length,t=target(),DYN=G('DYN'),minD=MOB?.55:.6,t0=now();
-        if(avg>t*1.32&&DYN>minD&&t0-D.lastChange>5000){D.good=0;D.bad++;
-          if(D.bad>=2){const nd=Math.max(minD,Math.round((DYN-.1)*20)/20);setDYN(nd);D.lastChange=t0;D.bad=0;D.capUp=Math.min(D.capUp,nd+.05);D.capUntil=t0+60000;D.samples.length=0;window.applyGfx();log('DRS down',nd)}}
-        else if(avg<t*1.1&&DYN<1&&t0-D.lastChange>9000){D.bad=0;D.good++;
+      if(CFG.autoQ!==false&&now()-D.runSince>3000&&D.samples.length>=40&&now()-(D.lastEval||0)>1200){
+        D.lastEval=now();
+        const rs=D.samples.slice(-90),avg=rs.reduce((a,b)=>a+b,0)/rs.length,t=target(),DYN=G('DYN'),gl=PERF.gl||0,t0=now();
+        /* floor depends on how far the governor (perf2.js) has already reduced shading cost: sharpness is sacrificed LAST */
+        const minD=MOB?(gl>=4?.5:.6):(gl>=5?.5:gl>=3?.7:.88),severe=avg>t*2;
+        if(avg>t*1.3&&DYN>minD&&t0-D.lastChange>2500){D.good=0;D.bad++;
+          if(D.bad>=(severe?1:2)){const nd=Math.max(minD,Math.round((DYN-(severe?.15:.1))*20)/20);setDYN(nd);D.lastChange=t0;D.bad=0;D.capUp=Math.min(D.capUp,nd+.05);D.capUntil=t0+60000;D.samples.length=0;window.applyGfx();log('DRS down',nd)}}
+        else if(avg<t*1.1&&DYN<1&&t0-D.lastChange>8000){D.bad=0;D.good++;
           if(D.good>=3){const lim=t0<D.capUntil?D.capUp:1,nd=Math.min(lim,Math.round((DYN+.05)*20)/20);if(nd>DYN){setDYN(nd);D.lastChange=t0;D.samples.length=0;window.applyGfx();log('DRS up',nd)}D.good=0}}
-        else{D.bad=0;D.good=0}
+        else if(!(avg>t*1.3)){D.bad=0;D.good=0}
         PERF.dyn=G('DYN');
       }
     }else if(!run){D.runSince=0}
@@ -246,7 +249,8 @@ function* batchJob(){
   }
   stats.units=nUnits+furnUnits;stats.meshesAfter=total-removed+B.units.length;
   stats.ms=Math.round(now()-t0);stats.removed=removed;stats.state='active';
-  try{G('R').compile(G('sc'),G('cam'))}catch(e){}   // build every shader program now (spawn hitch) instead of mid-game stutters
+  try{G('R').compile(G('sc'),G('cam'))}catch(e){}
+  try{window.applyGfx()}catch(e){}   // re-apply governor level (cheap-lighting swap needs the merged meshes to exist)   // build every shader program now (spawn hitch) instead of mid-game stutters
   log('static batch: removed',removed,'meshes ->',nUnits,'+',furnUnits,'furniture batches');
   PERF.dyn=G('DYN');
 }
@@ -306,7 +310,7 @@ function monitor(){
   for(let k=0;k<Math.min(pn,200);k++){if(mi>=pn)mi=0;const p=P[mi++],mo=p.mo,s=p.snap;
     const ei=mo.emissiveIntensity,eh=mo.emissive?mo.emissive.getHex():0;
     if(s[2]!==ei||s[1]!==eh){
-      if(p.wms){for(const mm of p.mms)if(mm.emissive){mm.emissiveIntensity=ei;mm.emissive.copy(mo.emissive)}s[2]=ei;s[1]=eh}   // day/night window glow follows the original material
+      if(p.wms){for(const mm of p.mms)if(mm.emissive){mm.emissiveIntensity=ei;mm.emissive.copy(mo.emissive);if(mm.__lite){mm.__lite.emissiveIntensity=ei}}s[2]=ei;s[1]=eh}   // day/night window glow follows the original material
       else{for(const u of p.units)revert(u);s[2]=ei;s[1]=eh}}
     else if(s[0]!==mo.color.getHex()||s[3]!==mo.opacity){for(const u of p.units)revert(u);s[0]=mo.color.getHex();s[3]=mo.opacity}
   }B.mcursor=mi;
@@ -327,7 +331,7 @@ function groundLayers(){
     box.copy(g.boundingBox).applyMatrix4(o.matrixWorld);
     const h=box.max.y-box.min.y;if(h>.12||box.max.y>.6||box.max.y<-.35)return;
     const wd=Math.max(box.max.x-box.min.x,box.max.z-box.min.z);if(wd<1.5)return;   // ignore tiny bits
-    flats.push({m,top:box.max.y});
+    flats.push({m,top:box.max.y,mesh:o});
   });
   if(!flats.length)return;
   flats.sort((a,b)=>a.top-b.top);
@@ -336,7 +340,7 @@ function groundLayers(){
   const done=new Set();
   for(const f of flats){const m=f.m;if(done.has(m)){m.polygonOffsetFactor=Math.min(m.polygonOffsetFactor,-(1+f.rank));m.polygonOffsetUnits=Math.min(m.polygonOffsetUnits,-(2+f.rank*3));continue}
     done.add(m);m.polygonOffset=true;m.polygonOffsetFactor=-(1+f.rank);m.polygonOffsetUnits=-(2+f.rank*3);m.needsUpdate=true}
-  st.layers=rank+1;st.meshes=flats.length;log('ground layers:',st.layers,'over',st.meshes,'surfaces');
+  PERF.groundMeshes=flats.map(f=>f.mesh);  st.layers=rank+1;st.meshes=flats.length;log('ground layers:',st.layers,'over',st.meshes,'surfaces');
 }
 function batchTick(){
   const S=G('S'),run=G('run');
