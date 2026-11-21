@@ -16,8 +16,9 @@ const log=(...a)=>{PERF.log.push(a.join(' '));if(HF.debug)console.log('[perf]',.
 /* ================= 1. graphics profile ================= */
 /* one-time migration so existing saved settings (lamps=0 meant "ALL lights on High") pick up the new budget */
 try{
-  if((CFG.hfPerf||0)<3){
-    CFG.hfPerf=3;
+  if((CFG.hfPerf||0)<4){
+    CFG.hfPerf=4;
+    if(MOB){CFG.resScale=1;if(!CFG.fpsCap||(CFG.fpsCap===30&&!HF.lowEnd))CFG.fpsCap=HF.lowEnd?30:60}
     if(!MOB&&CFG.fpsCap===30)CFG.fpsCap=0;   // old auto-detect capped desktops at 30 fps when the browser hid the GPU name
     if(MOB){CFG.resScale=1;CFG.part=Math.min(CFG.part||1,.6);if(!CFG.fpsCap)CFG.fpsCap=HF.lowEnd?30:60;if(CFG.gfx>1)CFG.gfx=1;CFG.bloomOn=false}
     CFG.lamps=0;
@@ -31,12 +32,15 @@ const _applyOrig=window.applyGfx;
 window.applyGfx=function(){
   try{
     const GFXQ=G('GFXQ'),g=CFG.gfx|0,q=GFXQ[g],DYN=G('DYN'),comp=G('comp');
-    const cap=MOB?(HF.lowEnd?1:1.25):2;
-    const base=MOB?((HF.lowEnd?.85:1)*(g>=2?1.15:1)):q.pr;   // phones: fixed sensible base, dynamic resolution handles the rest
-    const pr=Math.max(.5,Math.min(window.devicePixelRatio||1,base*(CFG.resScale||1),cap)*DYN);
+    const dpr=window.devicePixelRatio||1;
+    /* phones render at up to 2-2.5 device pixels per CSS pixel on the higher tiers (it was capped at 1.0-1.25 = a third of native on an iPhone);
+       dynamic resolution then backs off only as far as needed, and never below a sharpness floor until cheaper options are used */
+    const hi=MOB?Math.min(dpr,[1,1.5,2,2.5][g]*(HF.lowEnd?.75:1))*(CFG.resScale||1):Math.min(dpr,q.pr*(CFG.resScale||1),2);
+    PERF.prHi=hi;
+    const pr=Math.max(.5,hi*DYN);
     const w=innerWidth,h=innerHeight;
     if(Math.abs(pr-lastPR)>.005||w!==lastW||h!==lastH){R.setPixelRatio(pr);R.setSize(w,h);if(comp)comp.setSize(w,h);lastPR=pr;lastW=w;lastH=h}
-    const bl=q.bloom&&CFG.bloomOn!==false&&!(MOB&&g<2);setBLOOM(bl);
+    const bl=q.bloom&&CFG.bloomOn!==false&&!MOB;setBLOOM(bl);   // phones: bloom off (extra full-screen passes, and it disables MSAA)
     let sh=CFG.shadow>=0?CFG.shadow:q.sh;if(MOB)sh=Math.min(sh,HF.lowEnd?1:2);
     const n=[512,1024,2048,4096][Math.max(0,Math.min(3,sh))];
     if(sun.shadow.mapSize.x!==n){sun.shadow.mapSize.set(n,n);if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null}}
@@ -51,6 +55,8 @@ window.applyGfx=function(){
 };
 
 /* ================= 2. stable dynamic resolution + frame bookkeeping ================= */
+const saveDrs=()=>{try{localStorage.setItem('hf_drs',JSON.stringify({v:2,dyn:G('DYN'),dpr:window.devicePixelRatio||1}))}catch(e){}};
+try{const d=JSON.parse(localStorage.getItem('hf_drs')||'null');if(d&&d.v===2&&d.dyn>=.4&&d.dyn<=1&&Math.abs((d.dpr||1)-(window.devicePixelRatio||1))<.01){setDYN(d.dyn);window.applyGfx&&window.applyGfx()}}catch(e){}
 const D={samples:[],refresh:0,lastChange:0,bad:0,good:0,capUp:1,capUntil:0,runSince:0};
 let frameNo=0;
 function target(){const cap=CFG.fpsCap;if(cap)return 1000/cap;return 1000/(D.refresh||60)}
@@ -76,11 +82,12 @@ window.frameWatch=function(dt){
         D.lastEval=now();
         const rs=D.samples.slice(-90),avg=rs.reduce((a,b)=>a+b,0)/rs.length,t=target(),DYN=G('DYN'),gl=PERF.gl||0,t0=now();
         /* floor depends on how far the governor (perf2.js) has already reduced shading cost: sharpness is sacrificed LAST */
-        const minD=MOB?(gl>=4?.5:.6):(gl>=5?.5:gl>=3?.7:.88),severe=avg>t*2;
+        const hiPr=PERF.prHi||1;
+        const minD=MOB?Math.max(.4,Math.min(1,Math.min(gl<3?1.25:gl<5?1:.8,hiPr*.85)/hiPr)):(gl>=5?.5:gl>=3?.7:.88),severe=avg>t*2;
         if(avg>t*1.3&&DYN>minD&&t0-D.lastChange>2500){D.good=0;D.bad++;
-          if(D.bad>=(severe?1:2)){const nd=Math.max(minD,Math.round((DYN-(severe?.15:.1))*20)/20);setDYN(nd);D.lastChange=t0;D.bad=0;D.capUp=Math.min(D.capUp,nd+.05);D.capUntil=t0+60000;D.samples.length=0;window.applyGfx();log('DRS down',nd)}}
+          if(D.bad>=(severe?1:(gl<2?3:2))){const nd=Math.max(minD,Math.round((DYN-(severe?.15:.1))*20)/20);setDYN(nd);D.lastChange=t0;D.bad=0;D.capUp=Math.min(D.capUp,nd+.05);D.capUntil=t0+60000;D.samples.length=0;window.applyGfx();saveDrs();log('DRS down',nd)}}
         else if(avg<t*1.1&&DYN<1&&t0-D.lastChange>8000){D.bad=0;D.good++;
-          if(D.good>=3){const lim=t0<D.capUntil?D.capUp:1,nd=Math.min(lim,Math.round((DYN+.05)*20)/20);if(nd>DYN){setDYN(nd);D.lastChange=t0;D.samples.length=0;window.applyGfx();log('DRS up',nd)}D.good=0}}
+          if(D.good>=3){const lim=t0<D.capUntil?D.capUp:1,nd=Math.min(lim,Math.round((DYN+.05)*20)/20);if(nd>DYN){setDYN(nd);D.lastChange=t0;D.samples.length=0;window.applyGfx();saveDrs();log('DRS up',nd)}D.good=0}}
         else if(!(avg>t*1.3)){D.bad=0;D.good=0}
         PERF.dyn=G('DYN');
       }
@@ -318,6 +325,11 @@ function monitor(){
 /* ---- ground layering: flat ground-level surfaces (grass, asphalt, parks, runways, lane decals) sit only 0.01-0.03 units apart.
    Beyond ~150 m the depth buffer cannot tell them apart, so grass "flickers through" roads while you walk. Each distinct height gets its own
    polygon-offset rank (small, fixed, in depth-buffer units), so the higher surface always wins at every distance. */
+/* sharper textures at grazing angles (road markings, ground, facades): anisotropic filtering was never enabled */
+function sharpenTextures(){
+  try{const R=G('R'),max=R.capabilities.getMaxAnisotropy?R.capabilities.getMaxAnisotropy():4,want=Math.min(MOB?4:8,max);if(want<2)return;
+    const seen=new Set();W.traverse(o=>{if(!o.isMesh)return;const m=o.material;if(!m||Array.isArray(m))return;for(const t of[m.map,m.emissiveMap]){if(t&&!seen.has(t)){seen.add(t);if((t.anisotropy||1)<want){t.anisotropy=want;t.needsUpdate=true}}}});
+    PERF.aniso={textures:seen.size,level:want}}catch(e){}}
 function groundLayers(){
   const st=PERF.ground={layers:0,meshes:0};
   W.updateMatrixWorld(true);
@@ -345,7 +357,7 @@ function groundLayers(){
 function batchTick(){
   const S=G('S'),run=G('run');
   if(!run||!S||S.ph!==4||G('mode')==='commander'){return}
-  if(!B.layered&&S.t>.6){B.layered=true;try{groundLayers()}catch(e){console.error('ground layering failed',e)}}
+  if(!B.layered&&S.t>.6){B.layered=true;try{groundLayers()}catch(e){console.error('ground layering failed',e)}try{sharpenTextures()}catch(e){}}
   if(HF.noBatch||CFG.batch===false)return;
   if(!B.fired){if(S.t>1.0&&!G('PM')){B.fired=true;B.job=batchJob();B.t0=now()}return}
   if(B.job){

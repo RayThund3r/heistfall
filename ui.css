@@ -70,7 +70,7 @@ body.touchon #h .bar,body.touchon #cmp,body.touchon #tp,body.touchon #nws,body.t
 body.touchon .rc{background:var(--ui-bg)!important;border:0!important;border-radius:12px!important;padding:3px 10px!important;min-width:0!important;gap:8px!important;font-size:11px!important;text-shadow:none!important}
 body.touchon #tp{gap:4px!important;right:max(8px,env(safe-area-inset-right))!important;font-size:11px!important}
 body.touchon #cmp{background:var(--ui-bg)!important;border:0!important;padding:2px 14px!important;transform:translateX(-50%) scale(.82)!important;transform-origin:top center;top:calc(6px + env(safe-area-inset-top))!important}
-body.touchon #h .mm{border:1px solid var(--ui-bd)!important;box-shadow:none!important;width:112px!important;height:112px!important;top:calc(8px + env(safe-area-inset-top))!important;right:max(8px,env(safe-area-inset-right))!important}
+body.touchon #h .mm:not(.big){border:1px solid var(--ui-bd)!important;box-shadow:none!important;width:112px!important;height:112px!important;top:calc(8px + env(safe-area-inset-top))!important;right:max(8px,env(safe-area-inset-right))!important}
 body.touchon #gps{display:none!important}
 body.touchon .dist #tp{top:calc(128px + env(safe-area-inset-top))!important}
 body.touchon #tut,body.touchon #nws,body.touchon #nt .nt,body.touchon #dng{background:var(--ui-bg)!important;border:1px solid var(--ui-bd)!important;border-radius:12px!important;font-size:12px!important}
@@ -142,3 +142,43 @@ body.touchon #nt{bottom:calc(128px + env(safe-area-inset-bottom))!important}
 #perfhud{position:fixed;left:8px;bottom:8px;z-index:90;display:none;background:rgba(5,7,13,.82);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:8px 10px;color:#cfe8ff;font:11px/1.45 ui-monospace,Menlo,Consolas,monospace;max-width:min(92vw,460px);pointer-events:auto}
 #perfhud pre{margin:0 0 6px;white-space:pre-wrap;font:inherit}
 #perfhud button{min-width:0;min-height:0;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-size:11px;cursor:pointer}
+
+/* ---------- big map must stay big (it was being shrunk by the minimap rule) ---------- */
+body.touchon #h .mm.big,html.is-mobile #h .mm.big{position:fixed!important;left:50%!important;top:50%!important;right:auto!important;transform:translate(-50%,-50%)!important;width:min(90vh,90vw)!important;height:min(90vh,90vw)!important;border-radius:16px!important;z-index:20!important}
+/* ---------- vehicle panel: compact, never covers the prompt ---------- */
+body.touchon .rc.spd{display:grid!important;grid-template-columns:auto 1fr;column-gap:12px;row-gap:3px;align-items:center;min-width:0!important;padding:7px 16px!important;width:auto!important}
+body.touchon .rc.spd b{grid-column:1;grid-row:1/4;font-size:30px!important;align-self:center;min-width:44px;text-align:right}
+body.touchon .rc.spd small{grid-column:2;font-size:9px!important;letter-spacing:.14em;white-space:nowrap}
+body.touchon .rc.spd .sb{grid-column:2;width:110px!important;height:4px!important}
+body:has(.rc.spd).touchon #cm{bottom:calc(86px + env(safe-area-inset-bottom)) !important}
+body.touchon #fps{left:10px!important;right:auto!important;bottom:calc(4px + env(safe-area-inset-bottom))!important;transform:none!important;font-size:10px!important;opacity:.55}
+body.touchon #tut{cursor:pointer;pointer-events:auto!important}
+
+/* ---------- weapon picker / emote wheel / clear-pin button ---------- */
+body.touchon .rc.wpc{pointer-events:auto!important;cursor:pointer}
+#wsel{position:fixed;left:50%;bottom:calc(52px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:12;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:min(92vw,620px);padding:8px;background:rgba(10,14,22,.92);border:1px solid rgba(255,255,255,.16);border-radius:16px;animation:mfade .18s ease both}
+#wsel button{min-width:0;min-height:44px;padding:6px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:12px}
+#wsel button b{font-size:12px;letter-spacing:.1em}#wsel button small{opacity:.6;font-size:10px}
+#wsel button.sel{border-color:#5cc8ff;background:rgba(92,200,255,.18)}
+body.touchon #emw{pointer-events:auto}body.touchon #emw span{pointer-events:auto;cursor:pointer;min-height:40px;display:inline-flex;align-items:center}
+body.touchon #emw kbd{display:none}
+#tui .tb.t-wpclr{display:none;top:var(--st);bottom:auto;right:calc(var(--sr) + var(--u)*1.2);--w:calc(var(--u)*.9);background:rgba(220,60,80,.85)}
+#tui.mapopen.haswp .tb.t-wpclr{display:flex!important}
+
+/* ---------- autosave tick, skip-cutscene button, tappable objective ---------- */
+#asv{position:fixed;left:12px;top:calc(96px + env(safe-area-inset-top,0px));z-index:30;padding:4px 10px;border-radius:999px;background:rgba(10,14,22,.78);border:1px solid rgba(255,255,255,.14);color:#9df5b8;font:600 11px/1 system-ui,sans-serif;letter-spacing:.08em;opacity:0;transform:translateY(-4px);transition:opacity .25s,transform .25s;pointer-events:none}
+#asv.on{opacity:1;transform:none}
+#skipcut{position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:70;display:none;min-width:0;min-height:44px;padding:10px 20px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(10,14,22,.78);color:#fff;font:700 13px/1 system-ui,sans-serif;letter-spacing:.14em;cursor:pointer}
+#skipcut.on{display:block}
+body.touchon .rc.obj{pointer-events:auto!important;cursor:pointer}
+
+/* notifications: top-centre under the objective instead of colliding with the tutorial card */
+body.touchon #nt{left:50%!important;right:auto!important;transform:translateX(-50%);bottom:auto!important;top:calc(84px + env(safe-area-inset-top,0px))!important;align-items:center!important;max-width:60vw}
+/* install tip: small, top of the screen, never over gameplay */
+#tip{top:calc(10px + env(safe-area-inset-top,0px));bottom:auto!important;font-size:12px!important;max-width:min(60vw,440px)!important;padding:8px 12px!important}
+/* compact tutorial card */
+body.touchon #tut{display:grid!important;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:6px 10px!important;max-width:36vw!important;top:calc(100px + env(safe-area-inset-top,0px))!important}
+body.touchon #tut small{grid-column:1/3}body.touchon #tut b{grid-column:1;font-size:12px!important;line-height:1.3}body.touchon #tut kbd{grid-column:2;font-size:10px!important;padding:2px 7px!important}
+
+/* while the big atlas is open nothing else may compete with it */
+body.bigmap #tut,body.bigmap #tp,body.bigmap #nt,body.bigmap #cm,body.bigmap #h .bar,body.bigmap #cmp,body.bigmap .rc.obj,body.bigmap #wsel{display:none!important}

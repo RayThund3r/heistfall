@@ -7,7 +7,7 @@ const $=id=>document.getElementById(id);
 const PK=(0,eval)('(()=>({S,run,PM,PH,CUT,mode,AC,keys,TJ,CFG,CBT,WM,S0}))');   // reads the game's let/const globals cheaply (they are not on window)
 const g=n=>{try{return PK()[n]}catch(e){return undefined}};
 const setMH=(0,eval)('v=>{MH=v}'),lookBy=(0,eval)('(dx,dy)=>{yaw-=dx;pit=Math.max(.05,Math.min(1.1,pit+dy))}'),
-  callG=(0,eval)('n=>{if(n=="pause")openPause();else if(n=="pulse"){if(S&&!S.over)pulse()}else if(n=="phone"){if(S&&S.ph==4)togPh()}else if(n=="swap"){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}}');
+  callG=(0,eval)('n=>{if(n=="pause")openPause();else if(n=="pulse"){if(S&&!S.over)pulse()}else if(n=="phone"){if(S&&S.ph==4)togPh()}else if(n=="wpclr"){if(S&&S.wp)wpClear()}else if(n=="swap"){if(S&&S.wo){const i=S.wo.indexOf(S.wi);S.wi=S.wo[(i+1)%S.wo.length]}}}');
 const TUI=window.TUI={on:false,ctx:'',tray:false,lastTouch:0};
 window.touchOn=function(){return TUI.on};
 
@@ -26,6 +26,8 @@ function sync(){
   const c=context();
   const mo=!!(g('S')&&g('S').bm);
   root.classList.toggle('mapopen',mo&&on);
+  root.classList.toggle('haswp',!!(g('S')&&g('S').wp));
+  document.body.classList.toggle('bigmap',!!(mo&&on));
   if(c!==TUI.ctx){TUI.ctx=c;if(c!=='foot'){TUI.tray=false;tray.classList.remove('open')}releaseHeld();root.className=root.className.replace(/\bc-\S+/g,'').trim()+' c-'+c;if(mo)root.classList.add('mapopen')}
   rot();
 }
@@ -62,9 +64,9 @@ const B=[ // id,label,size,kind,payload
  ['pls','PULSE','big','act','pulse'],['dash','DASH','mid','tap','ShiftLeft'],['bar','WALL','sm','tap','KeyQ'],
  ['gas','GAS','big','hold','KeyW'],['brk','BRAKE','mid','hold','KeyS'],['hnd','DRIFT','sm','hold','Space'],['nit','NITRO','sm','hold','ShiftLeft'],
  ['ext','EXIT','sm','tap','KeyE'],['cam','VIEW','xs','tap','KeyU'],['up','UP','mid','hold','Space'],['dn','DOWN','mid','hold','KeyC'],
- ['pause','II','xs','act','pause'],['mapb','MAP','xs','tap','KeyM'],['mapx','✕','sm','tap','KeyM'],
+ ['pause','II','xs','act','pause'],['mapb','MAP','xs','tap','KeyM'],['mapx','✕','sm','tap','KeyM'],['wpclr','CLEAR PIN','sm','act','wpclr'],
  ['wplace','BUILD','big','tap','Space'],['wrot','ROT','xs','tap','KeyR'],['wsell','SELL','xs','tap','KeyX'],['wgo','WAVE','sm','tap','KeyG']];
-const TRAY=[['swap','SWAP','act','swap'],['blk','BLOCK','hold','KeyZ'],['shv','SHOVE','tap','KeyX'],['med','MED','tap','KeyF'],['phn','PHONE','act','phone'],['emo','EMOTE','tap','KeyG'],['dive','DIVE','hold','KeyC'],['sit','SIT','tap','KeyN'],['view','VIEW','tap','KeyU']];
+const TRAY=[['swap','SWAP','act','swap'],['crch','CROUCH','hold','KeyZ'],['eat','EAT','tap','KeyX'],['med','MED','tap','KeyF'],['phn','PHONE','act','phone'],['emo','EMOTE','tap','KeyG'],['dive','DIVE','hold','KeyC'],['sit','SIT','tap','KeyN'],['view','VIEW','tap','KeyU']];
 
 /* ---------- icons (stroke, 24x24) ---------- */
 const IC={
@@ -91,13 +93,15 @@ const IC={
  wplace:'<path d="M12 5v14M5 12h14"/>',wrot:'<path d="M20 12a8 8 0 11-2.6-5.9"/><path d="M20 4v5h-5"/>',
  wsell:'<path d="M5 7h14M9 7V5h6v2M7 7l1 13h8l1-13"/>',wgo:'<path d="M8 5l11 7-11 7z"/>',
  swap:'<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>',
- blk:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
- shv:'<path d="M5 12h9M11 7l5 5-5 5"/><path d="M19 6v12"/>',
+ crch:'<path d="M6 10l6 6 6-6"/><path d="M6 5h12"/>',
+ eat:'<path d="M7 3v7a2 2 0 002 2v9M11 3v5a2 2 0 01-2 2M17 3c-2.2 1.6-3 4-3 7h3v11"/>',
+ pinx:'<path d="M12 21s7-6 7-11a7 7 0 10-14 0c0 5 7 11 7 11z"/><path d="M9.5 7.5l5 5M14.5 7.5l-5 5"/>',
  med:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/>',
  phn:'<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>',
  emo:'<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 007 0"/><circle cx="9" cy="10" r=".8" fill="currentColor"/><circle cx="15" cy="10" r=".8" fill="currentColor"/>',
  dive:'<path d="M12 3v11M7.5 10l4.5 4.5 4.5-4.5"/><path d="M3.5 19c2-1.4 4-1.4 6 0s4 1.4 6 0 4-1.4 5 0"/>',
  sit:'<path d="M7 4v8h9v8M7 12v8"/>',view:'<path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'};
+IC.wpclr=IC.pinx;
 const ico=n=>'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(IC[n]||'')+'</svg>';
 function build(){
   if($('tui'))return;
@@ -222,7 +226,7 @@ function tx(s){
    .replace(/Move with WASD \(or the stick\)/,'Move with the left stick')
    .replace(/Hold Shift while moving to sprint/,'Push the stick to its edge to sprint')
    .replace(/Pick a weapon \(1-0\) and fire with the mouse/,'Tap SWAP in the ••• tray, hold FIRE')
-   .replace(/Eat or drink with X, use a medkit with F/,'Use MED / SHOVE in the ••• tray')
+   .replace(/Eat or drink with X, use a medkit with F/,'Use EAT and MED in the ••• tray')
    .replace(/Open the emote wheel and pick an emote/,'Open EMOTE in the ••• tray');
 }
 const TAGS={MOUSE:'DRAG',WASD:'STICK',SPACE:'JUMP',SHIFT:'RUN',P:'PHONE',M:'MAP',E:'USE',LMB:'FIRE','X / F':'TRAY',G:'EMOTE'};
@@ -231,6 +235,7 @@ function rewrite(node){
   const w=document.createTreeWalker(node,NodeFilter.SHOW_TEXT);let n;
   while(n=w.nextNode()){const v=n.nodeValue;let o=tx(v);if(o!==v)n.nodeValue=o}
   if(node.nodeType===1&&node.closest&&node.closest('#tut'))node.querySelectorAll&&node.querySelectorAll('small,kbd,i').forEach(e=>{const t=e.textContent.trim();if(TAGS[t])e.textContent=TAGS[t]});
+  const tut=$('tut');if(tut&&tut.contains(node)||node===tut){tut.querySelectorAll('u').forEach(e=>{if(e.textContent==='K'){e.textContent='tap';const nx=e.nextSibling;if(nx&&nx.nodeType===3&&/^\s*skip/.test(nx.nodeValue))nx.nodeValue=nx.nodeValue.replace('skip','to skip')}})}
 }
 let mo;
 function watchText(){
@@ -284,6 +289,32 @@ function tip(html,key){
   tipEl.innerHTML=html+'<button onclick="this.parentNode.classList.remove(\'on\')">OK</button>';tipEl.classList.add('on');setTimeout(()=>tipEl.classList.remove('on'),14000);
 }
 
+/* ---------- district quality of life (touch) ---------- */
+/* aim assist: while shooting, bend the hit-scan direction toward the nearest hostile (cop / gang member) within ~15 degrees */
+const AIM=(0,eval)('(f)=>{const w=WP[S.wi];if(!w||w.melee||w.gren||w.rpg||w.flame)return f;let best=null,bs=1e9;const px=P.position.x,pz=P.position.z,R=Math.min(w.rng,40);tgts().forEach(t=>{if(t.k!=="c"&&t.k!=="g")return;const dx=t.m.position.x-px,dz=t.m.position.z-pz,d=Math.hypot(dx,dz);if(d<2||d>R)return;const ang=Math.acos(Math.max(-1,Math.min(1,(dx*f[0]+dz*f[1])/d)));if(ang>.26)return;const sc=ang*10+d*.02;if(sc<bs){bs=sc;best=[dx/d,dz/d]}});if(!best)return f;const k=.75;const x=f[0]*(1-k)+best[0]*k,z=f[1]*(1-k)+best[1]*k,l=Math.hypot(x,z)||1;return[x/l,z/l]}');
+function installAim(){
+  const o=window.aimDir;if(typeof o!=='function'||o.__aa)return;
+  const w=function(){const f=o.apply(this,arguments);try{const C=g('CFG')||{};if(TUI.on&&C.aimAssist!==false)return AIM(f)}catch(e){}return f};w.__aa=1;window.aimDir=w}
+/* weapon picker: tap the weapon pill at the bottom to choose any owned weapon (no number keys on a phone) */
+const WLIST=(0,eval)('()=>({own:S.wo.slice(),cur:S.wi,names:WP.map(w=>w.n),mag:S.mag,res:S.res})'),WSET=(0,eval)('i=>{S.wi=i;S.sk=.2}');
+function weaponPicker(){
+  let box=$('wsel');if(box){box.remove();return}
+  let d;try{d=WLIST()}catch(e){return}
+  box=document.createElement('div');box.id='wsel';
+  box.innerHTML=d.own.map(i=>'<button data-w="'+i+'" class="'+(i===d.cur?'sel':'')+'"><b>'+d.names[i]+'</b><small>'+(d.mag[i]!=null&&d.names[i]&&!/FISTS|BAT/.test(d.names[i])?d.mag[i]+' / '+d.res[i]:'melee')+'</small></button>').join('');
+  document.body.appendChild(box);
+  box.addEventListener('pointerdown',e=>{const b=e.target.closest('button[data-w]');if(!b)return;e.preventDefault();e.stopPropagation();try{WSET(+b.dataset.w)}catch(_){}buzz();box.remove()});
+  setTimeout(()=>{const off=e=>{if(!box.contains(e.target)){box.remove();document.removeEventListener('pointerdown',off,true)}};document.addEventListener('pointerdown',off,true)},50)}
+/* emote wheel: the entries become tappable */
+function emoteTaps(){document.addEventListener('pointerdown',e=>{const sp=e.target.closest&&e.target.closest('#emw span');if(!sp||!TUI.on)return;e.preventDefault();e.stopPropagation();
+  const i=[...sp.parentNode.querySelectorAll('span')].indexOf(sp);try{(0,eval)('startEmote('+i+');S.emw=false;showEmw()')}catch(_){}buzz()},true)}
+/* tutorial: tap the card to skip, weapon pill: tap to pick */
+function hudTaps(){document.addEventListener('pointerdown',e=>{if(!TUI.on||e.pointerType==='mouse')return;const t=e.target.closest&&e.target.closest('#tut,.rc.wpc');if(!t)return;
+  if(t.id==='tut'){e.preventDefault();tapKey('KeyK');buzz()}else{e.preventDefault();weaponPicker();buzz()}},true)}
+/* Android: short vibration when you take damage */
+let lastHp=null;
+function hurtBuzz(){const S=g('S');if(!S||S.ph!==4){lastHp=null;return}const hp=S.hp;if(lastHp!=null&&hp<lastHp-3)buzz(hp<25?60:28);lastHp=hp}
+
 /* ---------- boot ---------- */
 function init(){
   if(!g('CFG')||!g('S0')){return setTimeout(init,50)}
@@ -291,7 +322,7 @@ function init(){
   rotEl=document.createElement('div');rotEl.id='rot';rotEl.innerHTML='<div class="ph"></div><div>ROTATE YOUR DEVICE</div><small>Heistfall plays best in landscape.</small><button>Play in portrait anyway</button>';document.body.appendChild(rotEl);
   rotEl.querySelector('button').onclick=()=>{TUI.portraitOK=true;rot()};
   tipEl=document.createElement('div');tipEl.id='tip';document.body.appendChild(tipEl);
-  watchText();mapTaps();
+  watchText();mapTaps();installAim();emoteTaps();hudTaps();
   /* A tap on the title / end screen shows the home menu on pointerdown; the browser's follow-up click would then land on whichever
      menu button is under the finger and silently activate it. Swallow that click (and its mouse twins) for a moment. */
   TUI.swallow=0;
@@ -312,9 +343,9 @@ function init(){
   let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<320&&!(e.target.closest&&e.target.closest('input,textarea')))e.preventDefault();lt=n},{passive:false});
   document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
   mm0();
-  setInterval(()=>{sync();promptSync()},120);
+  setInterval(()=>{sync();promptSync();hurtBuzz()},120);
   sync();
-  if(HF.ios&&!HF.standalone)setTimeout(()=>tip('For true fullscreen on iPhone: tap <b>Share</b> → <b>Add to Home Screen</b>, then open Heistfall from your home screen.','hf_ios_tip'),4000);
+  if(HF.ios&&!HF.standalone)setTimeout(()=>{if(!g('run'))tip('For true fullscreen on iPhone: tap <b>Share</b> → <b>Add to Home Screen</b>, then open Heistfall from your home screen.','hf_ios_tip')},3000);
   if(HF.debug)console.log('[mobile] ready',TUI);
 }
 function mm0(){const mm=$('mm');if(mm)mm.style.pointerEvents='auto'}

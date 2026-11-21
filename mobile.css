@@ -102,7 +102,7 @@ input[type=range]{touch-action:pan-x;height:34px}
 @media (max-width:900px) and (pointer:coarse),(max-height:520px) and (pointer:coarse){
   #h{--z:.68}
   #h .bar,#cmp,#tp,#gps,#nws,#dng,#tut,#nt,#cm,#bn,#emw,#mres,#help,#hl{zoom:var(--z)}
-  #h .mm{width:130px;height:130px;top:8px;right:max(8px,env(safe-area-inset-right))}
+  #h .mm:not(.big){width:130px;height:130px;top:8px;right:max(8px,env(safe-area-inset-right))}
   #gps{top:142px;right:max(8px,env(safe-area-inset-right));width:130px;zoom:1;font-size:10px}
   #h .bar{left:max(14px,env(safe-area-inset-left))!important}
   #tp{right:max(0px,env(safe-area-inset-right))!important}
@@ -211,7 +211,7 @@ body.touchon #tui.c-cut{display:block}#tui.c-cut .tapcont{display:flex}
 /* big-map close button */
 #tui .tb.t-mapx{display:none;top:var(--st);right:var(--sr);bottom:auto;--w:calc(var(--u)*.9);background:#ff4a5ed8;z-index:9}
 #tui.mapopen .t-mapx{display:flex}
-#tui.mapopen .tb:not(.t-mapx),#tui.mapopen .zone,#tui.mapopen .tray{display:none!important}
+#tui.mapopen .tb:not(.t-mapx):not(.t-wpclr),#tui.mapopen .zone,#tui.mapopen .tray{display:none!important}
 body.touchon #tui.mapopen{display:block}
 
 /* portrait layout: shift clusters up a bit so thumbs reach */

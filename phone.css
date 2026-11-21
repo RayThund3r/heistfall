@@ -70,3 +70,5 @@
 @media (max-height:520px){#ph.np .pd{--ph:96vh;width:min(300px,52vw)}#ph.np .scr{font-size:12px}#ph.np .grid{gap:8px 2px}}
 @media (max-width:640px) and (orientation:portrait){#ph.np .pd{--ph:min(92vh,150vw);width:min(86vw,calc(var(--ph)*.5));right:50%;transform:translate(150%,-50%)}#ph.np.open .pd{transform:translate(50%,-50%)}}
 @media (prefers-reduced-motion:reduce){#ph.np .pd,#ph.np .pd-bk{transition:none}#ph.np .body.in{animation:none}}
+
+#ph.np .btns.chips .btn{flex:0 0 auto;min-height:32px;padding:6px 12px;font-size:.92em}

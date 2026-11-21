@@ -106,8 +106,8 @@ PERF._tree={run:()=>{TREE.done=true;chunkTrees()},state:()=>TREE};
 const L={gl:0,cl:0,bad:0,good:0,samples:[],js:[],base:null,sw:false,last:0};
 const sPQ=(0,eval)('v=>{PARTQ=v}'),sDQ=(0,eval)('v=>{DRAWQ=v}'),sLB=(0,eval)('v=>{LBUD=v}'),sBL=(0,eval)('v=>{BLOOM=v}'),gv=(0,eval)('()=>({p:PARTQ,d:DRAWQ,l:LBUD,b:BLOOM})');
 const GL_MAX=6,CL_MAX=4,KEY='hf_gov';
-try{const sv=JSON.parse(localStorage.getItem(KEY)||'null');if(sv&&sv.v===1){L.gl=Math.min(GL_MAX,sv.gl|0);L.cl=Math.min(CL_MAX,sv.cl|0)}}catch(e){}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:1,gl:L.gl,cl:L.cl}))}catch(e){}};
+try{const sv=JSON.parse(localStorage.getItem(KEY)||'null');if(sv&&sv.v===2){L.gl=Math.min(GL_MAX,sv.gl|0);L.cl=Math.min(CL_MAX,sv.cl|0)}}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({v:2,gl:L.gl,cl:L.cl}))}catch(e){}};
 /* ----- cheap lighting swap (Standard PBR -> Lambert). Colour / emissive objects are SHARED with the original material, so seasonal tints,
    wrecks and day/night glow keep working. Fully reversible. ----- */
 const LITE={map:new Map(),done:new Map(),mode:0};

@@ -4,7 +4,7 @@
 try{
 const $=id=>document.getElementById(id);
 const HF=window.HF||{};
-const PK=(0,eval)('(()=>({S,PH,run,CFG,FAC,REG,BD,JR,SIDEQ,DS,PTAB}))');
+const PK=(0,eval)('(()=>({S,PH,run,CFG,FAC,REG,BD,JR,SIDEQ,DS,PTAB,P}))');
 const setPH=(0,eval)('v=>{PH=v;paused=!!v}');
 const G=()=>{try{return PK()}catch(e){return{}}};
 const el=$('ph');if(!el)return;
@@ -23,11 +23,11 @@ const fmtT=h=>{h=((h||0)%24+24)%24;return String(Math.floor(h)).padStart(2,'0')+
 const THEMES=['neon','sunset','forest','mono'];
 function travelList(){
   const {BD,REG,DS}=G(),out=[];
-  const sp=BD.filter(b=>b.sp);sp.forEach((b,i)=>out.push({n:b.nm,c:'Places',go:()=>window.tpTo(i)}));
-  out.push({n:'Beach pier',c:'Places',go:()=>window.tpS()});
-  [['Zoo',240,-90],['Forest',-200,-60],['Farm',-50,-215],['Golf course',70,-205],['Village',-245,70],['Lake',130,-190],['Mountain',170,-235]].forEach(a=>out.push({n:a[0],c:'Places',go:()=>window.tpZ(a[1],a[2],a[0])}));
-  REG.forEach(r=>out.push({n:r.n,c:'Districts',go:()=>window.tpZ(r.x,r.z+(r.n=='CONTAINER PORT'||r.n=='AIRPORT'?25:0),r.n)}));
-  out.push({n:'Island resort',c:'Places',go:()=>window.tpZ(320,DS+470,'Island resort')});
+  const sp=BD.filter(b=>b.sp);sp.forEach((b,i)=>out.push({n:b.nm,c:'Places',x:b.cx,z:b.cz+13,go:()=>window.tpTo(i)}));
+  out.push({n:'Beach pier',c:'Places',x:-20,z:DS+8,go:()=>window.tpS()});
+  [['Zoo',240,-90],['Forest',-200,-60],['Farm',-50,-215],['Golf course',70,-205],['Village',-245,70],['Lake',130,-190],['Mountain',170,-235]].forEach(a=>out.push({n:a[0],c:'Places',x:a[1],z:a[2],go:()=>window.tpZ(a[1],a[2],a[0])}));
+  REG.forEach(r=>{const zz=r.z+(r.n=='CONTAINER PORT'||r.n=='AIRPORT'?25:0);out.push({n:r.n,c:'Districts',x:r.x,z:zz,go:()=>window.tpZ(r.x,zz,r.n)})});
+  out.push({n:'Island resort',c:'Places',x:320,z:DS+470,go:()=>window.tpZ(320,DS+470,'Island resort')});
   return out;
 }
 let TR=[];
@@ -36,15 +36,16 @@ const APPS=[
    return h('Messages',MSG.length+' recent')+(MSG.length?MSG.map(m=>'<div class="msg"><i>'+({cash:'💵',warn:'⚠️',job:'💼',sys:'📡'}[m.k])+'</i><div><b>'+({cash:'PAYMENT',warn:'ALERT',job:'JOBS',sys:'CITY'}[m.k])+' · <time>'+fmtT(m.h)+'</time></b><span>'+esc(m.t)+'</span></div></div>').join('')+'<div style="margin-top:10px"><button class="btn" data-act="msgclr">Clear all</button></div>':'<div class="empty">No messages yet.<br>Mission results, payments and city alerts show up here.</div>')}},
  {id:'jobs',n:'Jobs',ic:'💼',a:'#ffb347',b:'#ff6a3d',r:()=>{
    const {S,JR}=G(),ms=S.ms;
-   return h('Jobs','$'+(S.sc||0))+'<h4>ACTIVE JOB</h4>'+(ms?'<div class="card"><div class="row2"><b>'+esc(String(ms.t).toUpperCase())+'</b><span class="tag">IN PROGRESS</span></div><small>'+esc(ms.txt||'')+'</small></div><button class="btn red" data-act="abandon" style="width:100%">Abandon job</button>':'<div class="card"><small>No active job. Offers refresh daily. Accept jobs at Taxi HQ, City Hall, the Bar, or ask townspeople for work.</small></div>')+
+   return h('Jobs','$'+(S.sc||0))+'<h4>ACTIVE JOB</h4>'+(ms?'<div class="card"><div class="row2"><b>'+esc(String(ms.t).toUpperCase())+'</b><span class="tag">IN PROGRESS</span></div><small>'+esc(ms.txt||'')+'</small></div>'+(S.mt?'<button class="btn" data-act="trkmt" style="width:100%;margin-bottom:6px">Track objective</button>':'')+'<button class="btn red" data-act="abandon" style="width:100%">Abandon job</button>':'<div class="card"><small>No active job. Offers refresh daily. Accept jobs at Taxi HQ, City Hall, the Bar, or ask townspeople for work.</small></div>')+
    '<h4>TODAY\u2019S OFFERS</h4>'+((S.jobs||[]).length?(S.jobs||[]).map(j=>'<div class="card"><div class="row2"><b>'+esc(j.title)+'</b><span class="tag">~$'+(JR[j.t]||0)+'</span></div><small>'+esc(j.brief)+'</small></div>').join(''):'<div class="empty">No offers right now.</div>')}},
  {id:'story',n:'Story',ic:'📖',a:'#b57bff',b:'#6a3dd6',r:()=>{
    const {S,SIDEQ}=G();let qp=0,qt='';try{qp=window.questProg();qt=window.questTitle()}catch(e){}
-   return h('Story',qp+'%')+'<div class="card"><b>'+esc(qt||'Not started')+'</b><small>'+esc(S.ms&&S.ms.t=='story'?S.ms.txt:'Start a new story from the main menu')+'</small><div class="bar2"><i style="width:'+qp+'%"></i></div></div><h4>SIDE QUESTS</h4>'+
+   return h('Story',qp+'%')+'<div class="card"><b>'+esc(qt||'Not started')+'</b><small>'+esc(S.ms&&S.ms.t=='story'?S.ms.txt:'Start a new story from the main menu')+'</small><div class="bar2"><i style="width:'+qp+'%"></i></div>'+(S.mt?'<button class="btn" data-act="trkmt" style="margin-top:6px">Track objective</button>':'')+'</div><h4>SIDE QUESTS</h4>'+
    SIDEQ.map(q=>{const dn=S.sideDone&&S.sideDone[q[0]],v=Math.min(q[4],q[3]());return'<div class="card"><div class="row2"><b>'+esc(q[1])+(dn?' \u2713':'')+'</b><span class="tag">$'+q[5]+'</span></div><small>'+esc(q[2])+'</small><div class="bar2"><i style="width:'+(dn?100:v/q[4]*100)+'%"></i></div></div>'}).join('')}},
  {id:'gps',n:'GPS',ic:'📍',a:'#ff6b6b',b:'#c8243a',r:()=>{
-   TR=travelList();const cats=['All',...new Set(TR.map(t=>t.c))];
-   return h('GPS','Fast travel')+'<input type="text" id="phq" placeholder="Search places\u2026" value="'+esc(gq)+'" autocomplete="off"><div class="btns" style="margin:8px 0">'+cats.map(c=>'<button class="btn '+(gc===c?'sel':'')+'" data-act="gcat:'+esc(c)+'">'+esc(c)+'</button>').join('')+'</div><div id="phlist">'+gpsList()+'</div>'}},
+   TR=travelList();const cats=['All',...new Set(TR.map(t=>t.c))],{S,P}=G();
+   const wp=S.wp,wd=wp?Math.round(Math.hypot(wp.x-P.position.x,wp.z-P.position.z)):0;
+   return h('GPS','Fast travel')+(wp?'<div class="card" style="border-left:3px solid #ffcf33"><div class="row2"><b>Waypoint active</b><span class="tag">'+fmtD(wd)+'</span></div><small>Follow the dashed route on your minimap and the yellow beacon, or fast-travel from the list.</small><button class="btn red" data-act="wclr" style="margin-top:6px">Clear waypoint</button></div>':'')+'<input type="text" id="phq" placeholder="Search places\u2026" value="'+esc(gq)+'" autocomplete="off"><div class="btns chips" style="margin:8px 0">'+cats.map(c=>'<button class="btn '+(gc===c?'sel':'')+'" data-act="gcat:'+esc(c)+'">'+esc(c)+'</button>').join('')+'<button class="btn '+(gs?'sel':'')+'" data-act="gsort">Nearest</button></div><div id="phlist">'+gpsList()+'</div>'}},
  {id:'fac',n:'Factions',ic:'🏴',a:'#ffd24a',b:'#c88a00',r:()=>{
    const {S,FAC}=G();
    return h('Factions','Reputation')+FAC.map(a=>{const rp=(S.rep&&S.rep[a.id])||0;return'<div class="card" style="border-left:3px solid '+a.c+'"><div class="row2"><b style="color:'+a.c+'">'+esc(a.n)+'</b><span class="tag">REP '+rp+'</span></div><small>'+esc(a.g)+'</small><div class="bar2"><i style="width:'+Math.max(0,Math.min(100,rp))+'%;background:'+a.c+'"></i></div></div>'}).join('')}},
@@ -62,14 +63,17 @@ const APPS=[
    const tg=(k,lab,def,sub)=>{const on=CFG[k]===undefined?def:!!CFG[k];return'<div class="set"><span>'+lab+(sub?'<small>'+sub+'</small>':'')+'</span><button class="tgl '+(on?'on':'')+'" data-act="tog:'+k+':'+(def?1:0)+'" aria-label="'+lab+'"></button></div>'};
    const seg=(k,lab,opts,cur)=>'<div class="set"><span>'+lab+'</span><div class="seg">'+opts.map(o=>'<button class="btn '+(String(cur)===String(o[1])?'sel':'')+'" data-act="cfg:'+k+':'+o[1]+'">'+o[0]+'</button>').join('')+'</div></div>';
    return h('Settings','')+'<h4>DISPLAY</h4>'+seg('gfx','Graphics',[['Low',0],['Med',1],['High',2],['Ultra',3]],CFG.gfx)+sl('resScale','Resolution',50,100,100,'Lower = faster')+seg('fpsCap','Frame cap',[['Off',0],['30',30],['60',60]],CFG.fpsCap||0)+tg('autoQ','Auto quality',true,'Adjusts resolution to keep FPS up')+tg('fps','Show FPS',false)+tg('perfHud','Performance overlay',false,'Shows what is slow; has a copy-report button')+
-   '<h4>GAME</h4>'+sl('vol','Master volume',0,100,100)+sl('sens','Look sensitivity',20,250,100)+sl('fov','Field of view',50,100,1)+sl('day','Day length',20,240,1,'Seconds per in-game hour')+tg('tut','Hints',true)+
-   '<h4>CONTROLS</h4>'+seg('touch','Touch controls',[['Auto','auto'],['On','on'],['Off','off']],CFG.touch||'auto')+(HF.touch?sl('tScale','Button size',70,150,100,'',1)+sl('tOp','Button opacity',30,100,100,'',.78)+sl('tSens','Touch look speed',50,200,100,'',1)+tg('tLeft','Left-handed layout',false,'Mirrors the controls')+tg('tFixed','Fixed stick',false,'Stick stays in the corner')+tg('autoRun','Auto-sprint',true,'Push the stick to the edge')+tg('tLabels','Button labels',true)+tg('haptic','Vibration',true):'')+
+   '<h4>GAME</h4>'+sl('vol','Master volume',0,100,100)+sl('sens','Look sensitivity',20,250,100)+sl('fov','Field of view',50,100,1)+sl('day','Day length',20,240,1,'Seconds per in-game hour')+tg('tut','Hints',true)+tg('autosave','Autosave',true,'Every 45 s and when you leave the game')+
+   '<h4>CONTROLS</h4>'+seg('touch','Touch controls',[['Auto','auto'],['On','on'],['Off','off']],CFG.touch||'auto')+(HF.touch?sl('tScale','Button size',70,150,100,'',1)+sl('tOp','Button opacity',30,100,100,'',.78)+sl('tSens','Touch look speed',50,200,100,'',1)+tg('tLeft','Left-handed layout',false,'Mirrors the controls')+tg('tFixed','Fixed stick',false,'Stick stays in the corner')+tg('autoRun','Auto-sprint',true,'Push the stick to the edge')+tg('aimAssist','Aim assist',true,'Nudges shots toward nearby hostiles')+tg('tLabels','Button labels',true)+tg('haptic','Vibration',true):'')+
    '<h4>PHONE</h4><div class="set"><span>Wallpaper</span><div class="seg">'+THEMES.map(t=>'<button class="btn '+((CFG.phTheme||'neon')===t?'sel':'')+'" data-act="theme:'+t+'">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div></div><div style="margin-top:12px"><button class="btn" data-act="fullset" style="width:100%">Open full settings\u2026</button></div>'}}
 ];
-let gq='',gc='All';
+let gq='',gc='All',gs=false;
+const fmtD=m=>m>=1000?(m/1000).toFixed(1)+' km':m+' m';
 function gpsList(){
-  const q=gq.trim().toLowerCase();let n=0;
-  const html=TR.map((t,i)=>({t,i})).filter(o=>(gc==='All'||o.t.c===gc)&&(!q||o.t.n.toLowerCase().includes(q))).map(o=>{n++;return'<div class="card" style="padding:0"><button class="btn go" data-act="go:'+o.i+'"><span>'+esc(o.t.n)+'</span><small>'+esc(o.t.c)+' \u203a</small></button></div>'}).join('');
+  const q=gq.trim().toLowerCase();let n=0;const P=G().P;
+  let rows=TR.map((t,i)=>({t,i,d:(P&&t.x!=null)?Math.round(Math.hypot(t.x-P.position.x,t.z-P.position.z)):0})).filter(o=>(gc==='All'||o.t.c===gc)&&(!q||o.t.n.toLowerCase().includes(q)));
+  if(gs)rows.sort((a,b)=>a.d-b.d);
+  const html=rows.map(o=>{n++;return'<div class="card pin" style="padding:0;flex-direction:row;gap:6px"><button class="btn go" data-act="go:'+o.i+'"><span>'+esc(o.t.n)+'</span><small>'+fmtD(o.d)+' \u00b7 '+esc(o.t.c)+'</small></button><button class="btn" data-act="trk:'+o.i+'" aria-label="Track '+esc(o.t.n)+'" title="Set waypoint" style="flex:0 0 46px">\ud83d\udccd</button></div>'}).join('');
   return n?html:'<div class="empty">No matching places.</div>';
 }
 function h(t,sub){return'<h2>'+esc(t)+(sub?'<small>'+esc(sub)+'</small>':'')+'</h2>'}
@@ -122,6 +126,7 @@ function close(){
   clearTimeout(closeT);closeT=setTimeout(()=>{if(!G().PH)el.style.display='none'},320);
 }
 window.togPh=function(){if(!G().S)return;if(G().PH)close();else open()};
+window.HFPHONE={open(appId){if(!G().S)return;if(!G().PH)open();if(appId&&app(appId)){view=appId;stack=[];render(true)}}};
 window.phRender=function(){if(G().PH)render(false)};
 
 /* ---------- actions ---------- */
@@ -134,6 +139,10 @@ function act(a){
    case'abandon':window.endM(0,0);render(false);break;
    case'gcat':gc=a.slice(5);render(false);break;
    case'go':{const t=TR[+x];if(t){t.go();if(G().PH)close()}break}
+   case'trk':{const t=TR[+x];if(t&&t.x!=null){window.wpSet(t.x,t.z);close()}break}
+   case'wclr':window.wpClear();render(false);break;
+   case'trkmt':{const m=S.mt;if(m){window.wpSet(m.x,m.z);close()}break}
+   case'gsort':gs=!gs;render(false);break;
    case'time':window.setT(+x);break;
    case'wx':S.wz=x;S.wx=90;render(false);break;
    case'ev':close();window.disaster(x==='quake'?'quake':'fire');break;
