@@ -28,16 +28,38 @@ function sync(){
   root.classList.toggle('mapopen',mo&&on);
   root.classList.toggle('haswp',!!(g('S')&&g('S').wp));
   document.body.classList.toggle('bigmap',!!(mo&&on));
-  if(c!==TUI.ctx){TUI.ctx=c;if(c!=='foot'){TUI.tray=false;tray.classList.remove('open')}releaseHeld();root.className=root.className.replace(/\bc-\S+/g,'').trim()+' c-'+c;if(mo)root.classList.add('mapopen')}
+  if(c!==TUI.ctx){TUI.ctx=c;layout(c);if(c!=='foot'){TUI.tray=false;tray.classList.remove('open')}releaseHeld();root.className=root.className.replace(/\bc-\S+/g,'').trim()+' c-'+c;if(mo)root.classList.add('mapopen')}
   rot();
 }
 /* ---------- control preferences (Phone > Settings > Controls) ---------- */
 let prefKey='';
 function applyPrefs(){
   const C=g('CFG')||{},k=[C.tScale,C.tOp,C.tLeft,C.tLabels,C.tFixed].join('|');if(k===prefKey)return;prefKey=k;
-  root.style.setProperty('--ts',String(Math.max(.7,Math.min(1.5,C.tScale||1))));root.style.setProperty('--to',String(Math.max(.25,Math.min(1,C.tOp==null?.78:C.tOp))));
+  root.style.setProperty('--ts',String(Math.max(.7,Math.min(1.5,C.tScale||1))));document.documentElement.style.setProperty('--ts',String(Math.max(.7,Math.min(1.5,C.tScale||1))));root.style.setProperty('--to',String(Math.max(.25,Math.min(1,C.tOp==null?.78:C.tOp))));
   root.classList.toggle('lefty',!!C.tLeft);root.classList.toggle('nolabels',C.tLabels===false);
 }
+/* ---------- button layout: [size, centre-x, centre-y] in control units, measured from the corner of the thumb cluster ----------
+   Positions are on arcs around the primary button with a guaranteed gap, so buttons can never overlap each other or the HUD zones. */
+const LAY={
+ foot:{fire:[1.6,1.15,1.15],jump:[1.1,1.15,2.9],use:[1.1,2.9,1.15],aim:[1.0,2.39,2.39],rld:[.8,4.0,1.15],run:[.8,3.95,2.3],more:[.8,3.95,3.45]},
+ arena:{pls:[1.6,1.15,1.15],jump:[1.1,1.15,2.9],dash:[1.1,2.9,1.15],bar:[.8,2.39,2.39],use:[.8,4.0,1.15]},
+ veh:{gas:[1.6,1.15,1.15],brk:[1.2,3.05,1.1],hnd:[.8,1.15,2.85],nit:[.8,2.55,2.4],ext:[.8,3.95,2.35],cam:[.68,3.2,3.5]},
+ fly:{dn:[1.3,1.15,1.15],up:[1.3,1.15,2.7],ext:[.8,2.9,1.1],cam:[.8,2.9,2.3],nit:[.8,4.1,1.1]},
+ warden:{wplace:[1.6,1.15,1.15],wgo:[1.1,2.9,1.15],wrot:[.8,1.15,2.9],wsell:[.8,2.39,2.39]}};
+let layCtx='';
+function layout(c){
+  if(!root||c===layCtx)return;layCtx=c;const L=LAY[c]||{};
+  root.querySelectorAll('button[data-id]').forEach(b=>{const v=L[b.dataset.id];if(v){b.style.setProperty('--k',v[0]);b.style.setProperty('--cx',v[1]);b.style.setProperty('--cy',v[2]);b.classList.toggle('lg',v[0]>=1)}else{b.style.removeProperty('--k');b.style.removeProperty('--cx');b.style.removeProperty('--cy')}})}
+/* live info on the buttons: ammo on FIRE, pulse energy ring */
+const BTNINFO=(0,eval)('()=>{const w=WP[S.wi];return{ranged:!!(w&&!w.melee),mag:S.mag[S.wi],res:S.res[S.wi],rl:S.rl>0,en:S.en,name:w?w.n:""}}');
+let lastAmm='';
+function buttonInfo(){
+  const S=g('S');if(!S||!root)return;
+  try{const c=TUI.ctx;
+    if(c==='foot'||c==='arena'){const f=root.querySelector('.t-fire .amm');
+      if(c==='foot'){const d=BTNINFO();const t=d.ranged?(d.rl?'\u21bb':d.mag):'';if(t!==lastAmm){lastAmm=t;if(f)f.textContent=t;root.querySelector('.t-fire').classList.toggle('melee',!d.ranged)}}
+      if(c==='arena'){const p=root.querySelector('.t-pls');if(p)p.style.setProperty('--p',Math.max(0,Math.min(100,S.en||0)).toFixed(0))}}
+  }catch(e){}}
 /* ---------- which control set? ---------- */
 function context(){
   if(!TUI.on)return'none';
@@ -107,7 +129,7 @@ function build(){
   if($('tui'))return;
   root=document.createElement('div');root.id='tui';root.className='c-none';
   root.innerHTML='<div class="zone zl"></div><div class="zone zr"></div><div class="stick"><b></b><i></i></div><div class="hint">MOVE</div><div class="tapcont">TAP TO CONTINUE</div>'+
-    B.map(b=>'<button class="tb '+b[2]+' t-'+b[0]+'" data-id="'+b[0]+'" aria-label="'+b[1]+'">'+ico(b[0])+'<span class="lb">'+b[1]+'</span><small></small></button>').join('')+
+    B.map(b=>'<button class="tb '+b[2]+' t-'+b[0]+'" data-id="'+b[0]+'" aria-label="'+b[1]+'">'+ico(b[0])+'<span class="lb">'+b[1]+'</span><small></small><em class="amm"></em></button>').join('')+
     '<div class="tray">'+TRAY.map(b=>'<button class="tb t-'+b[0]+'" data-tray="'+b[0]+'" aria-label="'+b[1]+'">'+ico(b[0])+'<span class="lb">'+b[1]+'</span></button>').join('')+'</div>';
   document.body.appendChild(root);
   tray=root.querySelector('.tray');stickEl=root.querySelector('.stick');stickKnob=stickEl.querySelector('i');hint=root.querySelector('.hint');
@@ -315,6 +337,12 @@ function hudTaps(){document.addEventListener('pointerdown',e=>{if(!TUI.on||e.poi
 let lastHp=null;
 function hurtBuzz(){const S=g('S');if(!S||S.ph!==4){lastHp=null;return}const hp=S.hp;if(lastHp!=null&&hp<lastHp-3)buzz(hp<25?60:28);lastHp=hp}
 
+/* all transient messages share ONE stack so they can never overlap each other */
+function gatherToasts(){
+  const h=$('h');if(!h||$('hud-toasts'))return;const box=document.createElement('div');box.id='hud-toasts';h.appendChild(box);
+  ['dng','nws','nt'].forEach(id=>{const e=$(id);if(e)box.appendChild(e)});
+  /* the game may create these lazily (ensureUI): adopt them when they appear */
+  new MutationObserver(()=>{['dng','nws','nt'].forEach(id=>{const e=$(id);if(e&&e.parentNode!==box)box.appendChild(e)})}).observe(h,{childList:true});}
 /* ---------- boot ---------- */
 function init(){
   if(!g('CFG')||!g('S0')){return setTimeout(init,50)}
@@ -322,7 +350,7 @@ function init(){
   rotEl=document.createElement('div');rotEl.id='rot';rotEl.innerHTML='<div class="ph"></div><div>ROTATE YOUR DEVICE</div><small>Heistfall plays best in landscape.</small><button>Play in portrait anyway</button>';document.body.appendChild(rotEl);
   rotEl.querySelector('button').onclick=()=>{TUI.portraitOK=true;rot()};
   tipEl=document.createElement('div');tipEl.id='tip';document.body.appendChild(tipEl);
-  watchText();mapTaps();installAim();emoteTaps();hudTaps();
+  gatherToasts();watchText();mapTaps();installAim();emoteTaps();hudTaps();
   /* A tap on the title / end screen shows the home menu on pointerdown; the browser's follow-up click would then land on whichever
      menu button is under the finger and silently activate it. Swallow that click (and its mouse twins) for a moment. */
   TUI.swallow=0;
@@ -343,7 +371,7 @@ function init(){
   let lt=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lt<320&&!(e.target.closest&&e.target.closest('input,textarea')))e.preventDefault();lt=n},{passive:false});
   document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
   mm0();
-  setInterval(()=>{sync();promptSync();hurtBuzz()},120);
+  setInterval(()=>{sync();promptSync();hurtBuzz();buttonInfo()},120);
   sync();
   if(HF.ios&&!HF.standalone)setTimeout(()=>{if(!g('run'))tip('For true fullscreen on iPhone: tap <b>Share</b> → <b>Add to Home Screen</b>, then open Heistfall from your home screen.','hf_ios_tip')},3000);
   if(HF.debug)console.log('[mobile] ready',TUI);

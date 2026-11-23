@@ -4,7 +4,7 @@
 try{
 const $=id=>document.getElementById(id);
 const HF=window.HF||{};
-const PK=(0,eval)('(()=>({S,PH,run,CFG,FAC,REG,BD,JR,SIDEQ,DS,PTAB,P}))');
+const PK=(0,eval)('(()=>({S,PH,run,CFG,FAC,REG,BD,JR,SIDEQ,DS,PTAB,P,MAPL,WX,yaw}))');
 const setPH=(0,eval)('v=>{PH=v;paused=!!v}');
 const G=()=>{try{return PK()}catch(e){return{}}};
 const el=$('ph');if(!el)return;
@@ -21,15 +21,30 @@ const fmtT=h=>{h=((h||0)%24+24)%24;return String(Math.floor(h)).padStart(2,'0')+
 
 /* ---------- apps ---------- */
 const THEMES=['neon','sunset','forest','mono'];
+/* ---------- GPS / Maps data ---------- */
+const CATS=[['All','All'],['Saved','\u2605 Saved'],['Recent','Recent'],['Food','Food'],['Fun','Fun'],['Shops','Shops'],['Services','Services'],['Sights','Sights'],['Districts','Districts'],['Nature','Nature']];
+const CAT_ICO={Food:'\ud83c\udf5c',Fun:'\ud83c\udfb0',Shops:'\ud83d\udecd\ufe0f',Services:'\ud83c\udfe5',Sights:'\ud83c\udfdb\ufe0f',Districts:'\ud83d\uddfa\ufe0f',Nature:'\ud83c\udf32',Home:'\ud83c\udfe0'};
+const CAT_COL={Food:'#ffb347',Fun:'#d77bff',Shops:'#6ee08a',Services:'#5cc8ff',Sights:'#ffd24a',Districts:'#9aa7c7',Nature:'#4fd18b'};
+function catOf(n){const u=n.toUpperCase();
+  if(/HOSPITAL|CLINIC|POLICE|PRECINCT|FIRE STATION|TAXI|CITY HALL|TOWN HALL|WARDEN HQ|BANK|EXCHANGE|CHURCH|CHAPEL|^HOME$|HOTEL|WORKSHOP/.test(u))return'Services';
+  if(/CAFE|DELI|RAMEN|SUSHI|TEA ROOM|DINER|\bPUB\b|\bBAR\b/.test(u))return'Food';
+  if(/CLUB|KARAOKE|ARCADE|GAME CENTER|PACHINKO|CASINO|ROULETTE|THEATRE|SAUNA/.test(u))return'Fun';
+  if(/BOUTIQUE|ARMS|BOOKSHOP|SKI SHOP|MARKET/.test(u))return'Shops';
+  return'Sights'}
+const titleCase=n=>n.toLowerCase().replace(/(^|[\s'-])([a-z])/g,(m,a,b)=>a+b.toUpperCase()).replace(/\bHq\b/,'HQ').replace(/\b(\d+)h\b/,'$1H');
+const LSJ={get(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const favs=()=>LSJ.get('hf_fav',[]),recents=()=>LSJ.get('hf_recent',[]);
+function pushRecent(k){const r=recents().filter(x=>x!==k);r.unshift(k);LSJ.set('hf_recent',r.slice(0,8))}
 function travelList(){
   const {BD,REG,DS}=G(),out=[];
-  const sp=BD.filter(b=>b.sp);sp.forEach((b,i)=>out.push({n:b.nm,c:'Places',x:b.cx,z:b.cz+13,go:()=>window.tpTo(i)}));
-  out.push({n:'Beach pier',c:'Places',x:-20,z:DS+8,go:()=>window.tpS()});
-  [['Zoo',240,-90],['Forest',-200,-60],['Farm',-50,-215],['Golf course',70,-205],['Village',-245,70],['Lake',130,-190],['Mountain',170,-235]].forEach(a=>out.push({n:a[0],c:'Places',x:a[1],z:a[2],go:()=>window.tpZ(a[1],a[2],a[0])}));
-  REG.forEach(r=>{const zz=r.z+(r.n=='CONTAINER PORT'||r.n=='AIRPORT'?25:0);out.push({n:r.n,c:'Districts',x:r.x,z:zz,go:()=>window.tpZ(r.x,zz,r.n)})});
-  out.push({n:'Island resort',c:'Places',x:320,z:DS+470,go:()=>window.tpZ(320,DS+470,'Island resort')});
-  return out;
-}
+  const add=(n,c,x,z,go)=>out.push({key:n,n:titleCase(n),c,x,z,go});
+  const sp=BD.filter(b=>b.sp);sp.forEach((b,i)=>add(b.nm,catOf(b.nm),b.cx,b.cz+13,()=>window.tpTo(i)));
+  add('Beach pier','Sights',-20,DS+8,()=>window.tpS());
+  [['Zoo',240,-90],['Forest',-200,-60],['Farm',-50,-215],['Golf course',70,-205],['Village',-245,70],['Lake',130,-190],['Mountain',170,-235]].forEach(a=>add(a[0],'Nature',a[1],a[2],()=>window.tpZ(a[1],a[2],a[0])));
+  REG.forEach(r=>{const zz=r.z+(r.n=='CONTAINER PORT'||r.n=='AIRPORT'?25:0);add(r.n,'Districts',r.x,zz,()=>window.tpZ(r.x,zz,r.n))});
+  add('Island resort','Sights',320,DS+470,()=>window.tpZ(320,DS+470,'Island resort'));
+  out.forEach(t=>{t.ico=t.key==='HOME'?CAT_ICO.Home:CAT_ICO[t.c]||'\ud83d\udccd'});
+  return out}
 let TR=[];
 const APPS=[
  {id:'msgs',n:'Messages',ic:'✉️',a:'#5ee27a',b:'#1d9d4a',badge:()=>unread,r:()=>{
@@ -42,10 +57,17 @@ const APPS=[
    const {S,SIDEQ}=G();let qp=0,qt='';try{qp=window.questProg();qt=window.questTitle()}catch(e){}
    return h('Story',qp+'%')+'<div class="card"><b>'+esc(qt||'Not started')+'</b><small>'+esc(S.ms&&S.ms.t=='story'?S.ms.txt:'Start a new story from the main menu')+'</small><div class="bar2"><i style="width:'+qp+'%"></i></div>'+(S.mt?'<button class="btn" data-act="trkmt" style="margin-top:6px">Track objective</button>':'')+'</div><h4>SIDE QUESTS</h4>'+
    SIDEQ.map(q=>{const dn=S.sideDone&&S.sideDone[q[0]],v=Math.min(q[4],q[3]());return'<div class="card"><div class="row2"><b>'+esc(q[1])+(dn?' \u2713':'')+'</b><span class="tag">$'+q[5]+'</span></div><small>'+esc(q[2])+'</small><div class="bar2"><i style="width:'+(dn?100:v/q[4]*100)+'%"></i></div></div>'}).join('')}},
- {id:'gps',n:'GPS',ic:'📍',a:'#ff6b6b',b:'#c8243a',r:()=>{
-   TR=travelList();const cats=['All',...new Set(TR.map(t=>t.c))],{S,P}=G();
-   const wp=S.wp,wd=wp?Math.round(Math.hypot(wp.x-P.position.x,wp.z-P.position.z)):0;
-   return h('GPS','Fast travel')+(wp?'<div class="card" style="border-left:3px solid #ffcf33"><div class="row2"><b>Waypoint active</b><span class="tag">'+fmtD(wd)+'</span></div><small>Follow the dashed route on your minimap and the yellow beacon, or fast-travel from the list.</small><button class="btn red" data-act="wclr" style="margin-top:6px">Clear waypoint</button></div>':'')+'<input type="text" id="phq" placeholder="Search places\u2026" value="'+esc(gq)+'" autocomplete="off"><div class="btns chips" style="margin:8px 0">'+cats.map(c=>'<button class="btn '+(gc===c?'sel':'')+'" data-act="gcat:'+esc(c)+'">'+esc(c)+'</button>').join('')+'<button class="btn '+(gs?'sel':'')+'" data-act="gsort">Nearest</button></div><div id="phlist">'+gpsList()+'</div>'}},
+ {id:'gps',n:'Maps',ic:'\ud83d\udccd',a:'#ff6b6b',b:'#c8243a',r:()=>{
+   TR=travelList();const {S,P}=G(),N=window.HFNAV||{};
+   let route='';
+   if(S.wp){const d=N.dist||Math.hypot(S.wp.x-P.position.x,S.wp.z-P.position.z);route='<div class="card route"><div class="row2"><div style="min-width:0"><b>\u27a4 '+esc(N.name||'Waypoint')+'</b><br><small>'+fmtD(Math.round(d))+(N.eta?' \u00b7 '+fmtE(N.eta):'')+'</small></div><button class="btn red mini" data-act="wclr">Clear</button></div></div>'}
+   const sel=gSel?TR.find(t=>t.key===gSel):null;let sheet='';
+   if(sel){const d=dstTo(sel),fav=favs().includes(sel.key);
+     sheet='<div class="card sheet"><div class="row2"><b>'+sel.ico+' '+esc(sel.n)+'</b><button class="star'+(fav?' on':'')+'" data-act="fav:'+TR.indexOf(sel)+'" aria-label="Save place">'+(fav?'\u2605':'\u2606')+'</button></div><small>'+esc(sel.c)+' \u00b7 '+fmtD(d)+' \u00b7 '+fmtE(eta(d))+'</small><div class="btns"><button class="btn sel" data-act="trk:'+TR.indexOf(sel)+'">Navigate</button><button class="btn" data-act="go:'+TR.indexOf(sel)+'">Fast travel</button></div></div>'}
+   else if(gPin){const d=Math.round(Math.hypot(gPin.x-P.position.x,gPin.z-P.position.z));
+     sheet='<div class="card sheet"><div class="row2"><b>\ud83d\udccc Dropped pin</b><button class="star" data-act="pinx" aria-label="Remove pin">\u2715</button></div><small>'+fmtD(d)+' \u00b7 '+fmtE(eta(d))+'</small><div class="btns"><button class="btn sel" data-act="pinnav">Navigate</button><button class="btn" data-act="pingo">Fast travel</button></div></div>'}
+   return h('Maps',areaName())+route+'<div class="atl"><canvas id="phmap" aria-label="Map"></canvas><button class="btn atz" data-act="gzoom">'+(gZoom==='near'?'World':'Nearby')+'</button></div>'+(sheet||'<div class="card hint"><small>Tap a dot to select a place, or tap anywhere on the map to drop a pin.</small></div>')+
+     '<input type="text" id="phq" placeholder="Search places\u2026" value="'+esc(gq)+'" autocomplete="off"><div class="chips">'+CATS.map(c=>'<button class="btn '+(gc===c[0]?'sel':'')+'" data-act="gcat:'+c[0]+'">'+c[1]+'</button>').join('')+'</div><div id="phlist">'+gpsList()+'</div>'}},
  {id:'fac',n:'Factions',ic:'🏴',a:'#ffd24a',b:'#c88a00',r:()=>{
    const {S,FAC}=G();
    return h('Factions','Reputation')+FAC.map(a=>{const rp=(S.rep&&S.rep[a.id])||0;return'<div class="card" style="border-left:3px solid '+a.c+'"><div class="row2"><b style="color:'+a.c+'">'+esc(a.n)+'</b><span class="tag">REP '+rp+'</span></div><small>'+esc(a.g)+'</small><div class="bar2"><i style="width:'+Math.max(0,Math.min(100,rp))+'%;background:'+a.c+'"></i></div></div>'}).join('')}},
@@ -67,14 +89,54 @@ const APPS=[
    '<h4>CONTROLS</h4>'+seg('touch','Touch controls',[['Auto','auto'],['On','on'],['Off','off']],CFG.touch||'auto')+(HF.touch?sl('tScale','Button size',70,150,100,'',1)+sl('tOp','Button opacity',30,100,100,'',.78)+sl('tSens','Touch look speed',50,200,100,'',1)+tg('tLeft','Left-handed layout',false,'Mirrors the controls')+tg('tFixed','Fixed stick',false,'Stick stays in the corner')+tg('autoRun','Auto-sprint',true,'Push the stick to the edge')+tg('aimAssist','Aim assist',true,'Nudges shots toward nearby hostiles')+tg('tLabels','Button labels',true)+tg('haptic','Vibration',true):'')+
    '<h4>PHONE</h4><div class="set"><span>Wallpaper</span><div class="seg">'+THEMES.map(t=>'<button class="btn '+((CFG.phTheme||'neon')===t?'sel':'')+'" data-act="theme:'+t+'">'+t[0].toUpperCase()+t.slice(1)+'</button>').join('')+'</div></div><div style="margin-top:12px"><button class="btn" data-act="fullset" style="width:100%">Open full settings\u2026</button></div>'}}
 ];
-let gq='',gc='All',gs=false;
+let gq='',gc='All',gSel='',gPin=null,gZoom='world';
 const fmtD=m=>m>=1000?(m/1000).toFixed(1)+' km':m+' m';
+const fmtE=s=>s<50?'<1 min':s<3570?Math.round(s/60)+' min':(s/3600).toFixed(1)+' h';
+const eta=d=>d/(G().S&&G().S.drv?14:5);          // rough: on foot ~5 m/s, in a vehicle ~14 m/s
+function dstTo(t){const P=G().P;return P?Math.round(Math.hypot(t.x-P.position.x,t.z-P.position.z)):0}
+function areaName(){const {P,REG,DS}=G();if(!P)return'';let best='',bd=190;for(const r of REG){const d=Math.hypot(r.x-P.position.x,r.z-P.position.z);if(d<bd){bd=d;best=r.n}}
+  if(best)return titleCase(best);return(Math.abs(P.position.x)<=DS+4&&Math.abs(P.position.z)<=DS+4)?'Citadel City':'Countryside'}
 function gpsList(){
-  const q=gq.trim().toLowerCase();let n=0;const P=G().P;
-  let rows=TR.map((t,i)=>({t,i,d:(P&&t.x!=null)?Math.round(Math.hypot(t.x-P.position.x,t.z-P.position.z)):0})).filter(o=>(gc==='All'||o.t.c===gc)&&(!q||o.t.n.toLowerCase().includes(q)));
-  if(gs)rows.sort((a,b)=>a.d-b.d);
-  const html=rows.map(o=>{n++;return'<div class="card pin" style="padding:0;flex-direction:row;gap:6px"><button class="btn go" data-act="go:'+o.i+'"><span>'+esc(o.t.n)+'</span><small>'+fmtD(o.d)+' \u00b7 '+esc(o.t.c)+'</small></button><button class="btn" data-act="trk:'+o.i+'" aria-label="Track '+esc(o.t.n)+'" title="Set waypoint" style="flex:0 0 46px">\ud83d\udccd</button></div>'}).join('');
-  return n?html:'<div class="empty">No matching places.</div>';
+  const q=gq.trim().toLowerCase(),fv=favs(),rc=recents();
+  let rows=TR.map((t,i)=>({t,i,d:dstTo(t)}));
+  if(gc==='Saved')rows=rows.filter(o=>fv.includes(o.t.key));
+  else if(gc==='Recent')rows=rows.filter(o=>rc.includes(o.t.key)).sort((a,b)=>rc.indexOf(a.t.key)-rc.indexOf(b.t.key));
+  else if(gc!=='All')rows=rows.filter(o=>o.t.c===gc);
+  if(q)rows=rows.filter(o=>o.t.n.toLowerCase().includes(q)||o.t.c.toLowerCase().includes(q));
+  if(gc!=='Recent')rows.sort((a,b)=>a.d-b.d);
+  rows=rows.slice(0,60);
+  if(!rows.length)return'<div class="empty">'+(gc==='Saved'?'Tap the \u2606 on a place to save it here.':gc==='Recent'?'Places you navigate to show up here.':'No matching places.')+'</div>';
+  return rows.map(o=>{const on=fv.includes(o.t.key);return'<div class="prow'+(gSel===o.t.key?' sel':'')+'" data-act="sel:'+o.i+'" role="button"><i style="--c:'+(CAT_COL[o.t.c]||'#aab3c8')+'">'+o.t.ico+'</i><div><b>'+esc(o.t.n)+'</b><small>'+esc(o.t.c)+' \u00b7 '+fmtD(o.d)+' \u00b7 '+fmtE(eta(o.d))+'</small></div><button class="star'+(on?' on':'')+'" data-act="fav:'+o.i+'" aria-label="'+(on?'Unsave':'Save')+'">'+(on?'\u2605':'\u2606')+'</button></div>'}).join('')}
+/* ---------- atlas inside the phone ---------- */
+let AT=null;
+function drawAtlas(){
+  const cv=$('phmap');if(!cv)return;const g=G(),P=g.P,WX=g.WX||700;
+  let M=g.MAPL;if(!M){try{window.mapBuild();M=G().MAPL}catch(e){}}
+  const short=innerHeight<520,cs=Math.max(120,Math.min(short?150:210,cv.parentNode.clientWidth||190)),dpr=Math.min(2,window.devicePixelRatio||1);
+  cv.style.width=cv.style.height=cs+'px';cv.width=cv.height=Math.round(cs*dpr);const c=cv.getContext('2d');c.scale(dpr,dpr);
+  const half=gZoom==='near'?210:WX,cx=gZoom==='near'?P.position.x:0,cz=gZoom==='near'?P.position.z:0,k=cs/(2*half);
+  const X=x=>(x-cx)*k+cs/2,Z=z=>(z-cz)*k+cs/2;
+  c.fillStyle='#0b1a2c';c.fillRect(0,0,cs,cs);
+  if(M&&M.width){const sx=(cx-half+WX)/(2*WX)*M.width,sz=(cz-half+WX)/(2*WX)*M.height,sw=2*half/(2*WX)*M.width,sh=2*half/(2*WX)*M.height;
+    const x0=Math.max(0,sx),z0=Math.max(0,sz),x1=Math.min(M.width,sx+sw),z1=Math.min(M.height,sz+sh);
+    if(x1>x0&&z1>z0){c.imageSmoothingEnabled=true;c.drawImage(M,x0,z0,x1-x0,z1-z0,(x0-sx)/sw*cs,(z0-sz)/sh*cs,(x1-x0)/sw*cs,(z1-z0)/sh*cs)}}
+  c.fillStyle='rgba(5,8,14,.28)';c.fillRect(0,0,cs,cs);
+  // places
+  for(const t of TR){if(t.c==='Districts')continue;const px=X(t.x),pz=Z(t.z);if(px<2||pz<2||px>cs-2||pz>cs-2)continue;
+    c.beginPath();c.arc(px,pz,gSel===t.key?5:2.6,0,7);c.fillStyle=CAT_COL[t.c]||'#fff';c.fill();c.lineWidth=gSel===t.key?2:.8;c.strokeStyle=gSel===t.key?'#fff':'rgba(0,0,0,.6)';c.stroke()}
+  if(gZoom==='world'||true){c.font='700 7px system-ui,sans-serif';c.textAlign='center';c.fillStyle='rgba(255,255,255,.7)';for(const t of TR){if(t.c!=='Districts')continue;const px=X(t.x),pz=Z(t.z);if(px>10&&pz>8&&px<cs-10&&pz<cs-4)c.fillText(t.n.toUpperCase(),px,pz)}}
+  // waypoint + dropped pin
+  const pin=(x,z,col)=>{const px=X(x),pz=Z(z);c.beginPath();c.arc(px,pz,5.5,0,7);c.fillStyle=col;c.fill();c.lineWidth=2;c.strokeStyle='#fff';c.stroke()};
+  const S=g.S;if(S.wp)pin(S.wp.x,S.wp.z,'#ffcf33');if(gPin)pin(gPin.x,gPin.z,'#ff4a5e');
+  // you
+  const px=X(P.position.x),pz=Z(P.position.z),yw=g.yaw||0;   // heading (forward = (-sin yaw, -cos yaw)), clockwise from "up"
+    c.save();c.translate(px,pz);c.rotate(Math.atan2(-Math.sin(yw),Math.cos(yw)));c.fillStyle='#5cc8ff';c.strokeStyle='#fff';c.lineWidth=1.6;c.beginPath();c.moveTo(0,-7);c.lineTo(5,6);c.lineTo(0,3);c.lineTo(-5,6);c.closePath();c.fill();c.stroke();c.restore();
+  c.strokeStyle='rgba(255,255,255,.25)';c.lineWidth=1;c.strokeRect(.5,.5,cs-1,cs-1);
+  AT={cs,X,Z,k,cx,cz,half};
+  if(!cv._bound){cv._bound=1;cv.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(!AT)return;const r=cv.getBoundingClientRect(),mx=(e.clientX-r.left)*(AT.cs/r.width),mz=(e.clientY-r.top)*(AT.cs/r.height);
+    let best=null,bd=14;for(const t of TR){if(t.c==='Districts'&&gZoom==='near')continue;const d=Math.hypot(AT.X(t.x)-mx,AT.Z(t.z)-mz);if(d<bd){bd=d;best=t}}
+    if(best){gSel=best.key;gPin=null}else{const WX2=G().WX||700,wx=(mx-AT.cs/2)/AT.k+AT.cx,wz=(mz-AT.cs/2)/AT.k+AT.cz;gPin={x:Math.max(-WX2+6,Math.min(WX2-6,wx)),z:Math.max(-WX2+6,Math.min(WX2-6,wz))};gSel=''}
+    click();buzz();render(false)},{passive:false})}
 }
 function h(t,sub){return'<h2>'+esc(t)+(sub?'<small>'+esc(sub)+'</small>':'')+'</h2>'}
 
@@ -103,6 +165,7 @@ function render(anim){
   body.innerHTML=html;body.dataset.v=view;
   if(anim){body.classList.remove('in');void body.offsetWidth;body.classList.add('in');body.scrollTop=0}else if(same)body.scrollTop=keep;
   if(view==='msgs')unread=0;
+  if(view==='gps')try{drawAtlas()}catch(e){console.error('atlas',e)}
   tick();
 }
 function tick(){if(statClk)statClk.textContent=fmtT(G().S.tm)}
@@ -138,11 +201,16 @@ function act(a){
    case'msgclr':MSG.length=0;unread=0;render(false);break;
    case'abandon':window.endM(0,0);render(false);break;
    case'gcat':gc=a.slice(5);render(false);break;
-   case'go':{const t=TR[+x];if(t){t.go();if(G().PH)close()}break}
-   case'trk':{const t=TR[+x];if(t&&t.x!=null){window.wpSet(t.x,t.z);close()}break}
+   case'sel':{const t=TR[+x];if(t){gSel=gSel===t.key?'':t.key;gPin=null;render(false);if(body)body.scrollTop=0}break}
+   case'fav':{const t=TR[+x];if(t){const f=favs(),i=f.indexOf(t.key);if(i>=0)f.splice(i,1);else f.push(t.key);LSJ.set('hf_fav',f);render(false)}break}
+   case'go':{const t=TR[+x];if(t){pushRecent(t.key);t.go();if(G().PH)close()}break}
+   case'trk':{const t=TR[+x];if(t&&t.x!=null){pushRecent(t.key);if(window.HFNAV)window.HFNAV.willSet(t.n);window.wpSet(t.x,t.z);close()}break}
+   case'pinnav':{if(gPin){if(window.HFNAV)window.HFNAV.willSet('Dropped pin');window.wpSet(gPin.x,gPin.z);close()}break}
+   case'pingo':{if(gPin){window.tpZ(gPin.x,gPin.z,'Dropped pin');close()}break}
+   case'pinx':gPin=null;render(false);break;
+   case'gzoom':gZoom=gZoom==='near'?'world':'near';render(false);break;
    case'wclr':window.wpClear();render(false);break;
    case'trkmt':{const m=S.mt;if(m){window.wpSet(m.x,m.z);close()}break}
-   case'gsort':gs=!gs;render(false);break;
    case'time':window.setT(+x);break;
    case'wx':S.wz=x;S.wx=90;render(false);break;
    case'ev':close();window.disaster(x==='quake'?'quake':'fire');break;

@@ -2212,7 +2212,7 @@ x.save();x.translate(X(px),Z(pz));x.rotate(Math.PI-P.rotation.y);x.fillStyle='#f
 x.restore();x.fillStyle='#0008';x.fillRect(0,0,sz,34);x.fillStyle='#cfe6f2';x.font='700 13px sans-serif';x.textAlign='left';x.fillText('CITADEL ATLAS',14,22);x.textAlign='right';x.fillStyle='#8fb4c8';x.font='12px sans-serif';x.fillText(dateStr()+'  '+pad(Math.floor(S.tm))+':'+pad(Math.floor(S.tm%1*60)),sz-14,22);
 x.fillStyle='#0009';x.fillRect(0,sz-26,sz,26);x.fillStyle='#9fc8e0';x.font='11px sans-serif';x.textAlign='center';x.fillText((HFD.touch&&document.body.classList.contains('touchon')?'Tap to set a waypoint  \u00b7  CLEAR PIN to remove  \u00b7  \u2715 to close':'Click to set a waypoint  \u00b7  Right-click to clear  \u00b7  M to close')+(S.wp?'   \u00b7   '+Math.round(RTE.len||0)+' m to go':''),sz/2,sz-9);return}
 // small round minimap, rotates with the camera
-const R0=sz/2,zr=64,s=R0/zr,sk=s/K;x.save();x.beginPath();x.arc(R0,R0,R0-3,0,6.3);x.clip();x.fillStyle=MP.sea;x.fillRect(0,0,sz,sz);
+const R0=sz/2,zr=(CFG.mmRange||64)*(S.drv?1.35:1),s=R0/zr,sk=s/K;x.save();x.beginPath();x.arc(R0,R0,R0-3,0,6.3);x.clip();x.fillStyle=MP.sea;x.fillRect(0,0,sz,sz);
 x.translate(R0,R0);x.rotate(yaw);x.save();x.scale(sk,sk);x.drawImage(MAPL,-(px+WX)*K,-(pz+WX)*K);x.restore();
 const X=a=>(a-px)*s,Z=a=>(a-pz)*s,dot=(a,b,col,r)=>{const dx=X(a),dz=Z(b);if(dx*dx+dz*dz>R0*R0)return;x.fillStyle=col;x.beginPath();x.arc(dx,dz,r,0,6.3);x.fill()};
 if(S.wp&&RTE.pts.length){x.strokeStyle='#33ccff';x.lineWidth=4;x.lineJoin='round';x.lineCap='round';x.globalAlpha=.9;x.beginPath();RTE.pts.forEach((q,i)=>i?x.lineTo(X(q[0]),Z(q[1])):x.moveTo(X(q[0]),Z(q[1])));x.stroke();x.globalAlpha=1}

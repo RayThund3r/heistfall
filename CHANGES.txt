@@ -116,3 +116,100 @@ The old scrolling "PHONE" panel is replaced by a phone that slides in from the r
 - Settings app changes real game settings live and saves them: graphics tier, resolution, frame cap, auto quality, FPS counter, master volume, look sensitivity, field of view, day length, hints, touch-control mode, vibration, and 4 wallpaper themes. "Open full settings" jumps to the pause-menu settings.
 - Typing in the GPS search never triggers game hotkeys. Works with mouse, touch and keyboard; sized for phones in landscape and portrait.
 - Falls back to the old phone automatically if phone.js is missing or fails to load.
+
+==========================================================================
+PERFORMANCE PASS 2 (perf2.js, plus a shader pre-compile in perf.js)
+==========================================================================
+Found by reading the game's per-frame code (live profiling of the full city is not possible in the build sandbox, so nothing here is a guess about GPU speed; all changes are logic-level and each can be disabled by removing its block):
+1. HUD DOM de-duplication: the game rebuilt the right-hand HUD panel (#tp), the interaction prompt (#cm) and the compass (#cmp) with innerHTML EVERY frame, even when the text was identical (forces HTML parsing, style + layout and garbage every frame). Identical writes are now skipped (27 of 31 writes skipped in a test run).
+2. Minimap throttled to 30 fps desktop / 20 fps phones (it is a 2D-canvas redraw with the route solver attached). The big map is never throttled.
+3. Nothing is drawn while the pause menu or the phone is open: the world is frozen anyway, so re-rendering shadows + bloom + thousands of objects was wasted battery and heat (a WebGL canvas keeps its last picture). It resumes instantly and re-renders when settings change or the window resizes.
+4. Far-pedestrian scene-graph pruning: pedestrians beyond the LOD distance were already swapped for one baked mesh, but their ~30 hidden body-part nodes each were still walked, composed and matrix-multiplied by three.js every frame (about 8,000 nodes in the city). They are now unlinked from the parent's child list while far (parent pointers and traverse() still work, so disposal/tinting code is unaffected) and restored in their original order when you get close. Vehicles are deliberately left alone.
+5. Shader pre-compile right after batching: every shader program is built during the single spawn hitch instead of causing stutters later (entering a car, weather changes, etc.).
+6. Automatic quality governor: if dynamic resolution has already hit its floor and the game is still well below target FPS, it steps down in stages (shadow update rate -> particles/draw distance/lights -> shadows off) and steps back up when frame time recovers. Not saved to your settings; reset on reload.
+Debug: add ?debug to see the FPS counter; window.HFPERF.p2 has the live counters (domSkips, miniSkips, pausedSkips, pruned, level).
+
+==========================================================================
+PASS 4: menu bleed-through, z-fighting, loading screen, controls v2, minimal mobile UI, more performance
+==========================================================================
+BUGS FIXED
+- Menus showing through gameplay on phones: my phone layout forced "#m.home { display:grid !important }", which overrode the game's own "hide the menu" (display:none) once a game started. The rule is now gated so a hidden menu stays hidden.
+- Title-screen tap activating a random menu item: tapping the title screen shows the home menu on pointerdown, then the browser's follow-up click landed on whichever menu button was under the finger and silently started it. That stray click is now swallowed for 0.65 s.
+- Green ground flickering through roads: flat ground-level surfaces (grass, asphalt, parks, runways) were only 0.01-0.03 units apart, which the depth buffer cannot separate beyond ~150 m. A one-time pass gives each distinct height its own tiny polygon-offset rank so the higher surface always wins at any distance. Works for both desktop and phones, and merged batches keep the offsets.
+- Desktop stuck at "30 FPS": the game's old auto-detect capped desktops at 30 fps when the browser hides the GPU name (Brave, Firefox with fingerprint protection). That saved cap is cleared once; the dynamic resolution + safety net now manage load instead. (Phone > Settings > Frame cap still lets you choose.)
+NEW
+- Loading transition: menu -> gameplay now shows a loading screen (logo, progress bar, stage text, tips) that is painted BEFORE the heavy world build starts, stays up while batching / shader compile finish, then fades out. Covers New Game, Continue and every mode start.
+- Touch controls v2: new minimal glass skin with line icons, hot-prompt glow, context sets for on-foot / vehicle / aircraft / arena / Warden. New options in Phone > Settings > Controls: button size, opacity, touch look speed, left-handed layout, fixed stick, auto-sprint, button labels, vibration.
+- Mobile UI: HUD rebuilt as thin pills with no skew; the right-hand panel was reflowed (clock + cash top-right, weapon / vehicle speed bottom-centre, mission objective top-centre) so nothing sits under your thumbs; rounded minimal menus, pause menu, prompts, dialogs; staggered menu entrance animation.
+PERFORMANCE
+- Chunked tree culling: forests were drawn in full every frame (instanced meshes cannot be culled per tree). They are regrouped into spatial chunks with proper bounds and hidden variants are dropped, so only trees in view are drawn.
+- Static batching now starts 1.0 s after spawn (was 2.5 s) and observes for 1.5 s (was 2.5 s).
+CLEANUP
+- Removed the retired #t2 touch-layer CSS from style.css.
+- All scripts are now cache-busted with ?v=3 so GitHub Pages visitors get the new files.
+
+==========================================================================
+PASS 5: adaptive quality governor + built-in performance overlay (from your 12 FPS / 27 FPS screenshots)
+==========================================================================
+DIAGNOSIS: 12 FPS at 90% resolution and 27 FPS at 60% resolution is almost exactly the ratio of pixels shaded (0.81 vs 0.36), i.e. the game is
+limited by PER-PIXEL cost (integrated-GPU style), not by draw calls. Every pixel was shaded with full PBR lighting, up to 12 point lights,
+soft shadows, an environment map and bloom, and the only automatic fix was shrinking the image (which blurs everything).
+NEW
+- Two-ladder quality governor (perf2.js). It tells GPU-bound from CPU-bound by comparing JS+draw-submission time with frame time, then steps:
+    GPU ladder: bloom off -> 4 lights + 1024 shadow map -> environment map off -> cheap (Lambert) lighting on scenery + ground ->
+                cheap lighting on everything + 2 lights -> shadows off / shorter view
+    CPU ladder: shadow update every 3rd frame -> fewer particles + shorter draw distance -> sun shadow pass off -> shorter view still
+  Resolution scaling is now allowed to fall far only AFTER the cheaper options are used, so the picture stays sharp as long as possible.
+  Cheap lighting shares colour/emissive objects with the original materials, so seasons, wrecks and day/night window glow keep working, and it is fully reversible.
+- Reaction is time-based (checks every ~1.5 s, steps again within 2.5 s if frames are under half speed). Before it counted frames, which at 12 FPS meant a 10+ second wait.
+- The level reached is remembered (localStorage "hf_gov") so the next launch starts already stable instead of re-learning. It steps back up slowly (20 s of headroom) when things are easy.
+- Software-rendering detection: if the browser reports SwiftShader/llvmpipe/Basic Render (hardware acceleration OFF) the governor starts at a cheap level and a tip tells the player to enable "Use graphics acceleration".
+- Performance overlay: add ?debug to the URL, or Phone > Settings > Performance overlay. Shows FPS, resolution %, JS ms, draw-submit ms, CPU share, draw calls, triangles, shader programs, ladder levels, batching/tree state and the GPU name, with a "copy report" button.
+  If it is still slow, press that button and paste the report back: it shows exactly whether the CPU or the GPU is the limit.
+
+==========================================================================
+PASS 6: sharpness on phones + district-mode quality of life (from your iPhone screenshots)
+==========================================================================
+WHY IT LOOKED PIXELATED (even on Ultra)
+- Safari never reports device memory, and my detection treated "unknown" as "low-end". Every iPhone was classed low-end, which capped the render at 1.0 pixel per CSS pixel (one third of the screen's real resolution on a 3x iPhone) and then dynamic resolution shrank it further (your corner readout said 28 FPS - 50%). Fixed: iOS is never classed low-end from missing data; only very old devices (<=2 cores) are.
+- Edge smoothing (MSAA) was switched off on every phone. It is nearly free on tile-based GPUs (iPhone, most Android), so it is back on for iOS and for Android devices that are not low-end.
+- New resolution policy on phones: Low 1.0 / Medium 1.5 / High 2.0 / Ultra 2.5 device pixels per CSS pixel (capped at the screen's native ratio). Dynamic resolution works inside that range, has a sharpness floor that is only lowered after the cheaper governor steps are used, waits for 3 slow checks before touching resolution, and its last value is remembered (hf_drs).
+- Bloom is off on phones (extra full-screen passes that also disable MSAA).
+- Anisotropic texture filtering (4x phones, 8x desktop) for road markings, ground and facades at grazing angles. It had never been enabled.
+- Old saved governor / frame-cap settings from the previous build are ignored once (versioned), so existing players are not stuck at a low level.
+LAYOUT BUGS FROM YOUR SCREENSHOTS
+- Big map was crushed into a tiny box at the top centre (my minimap-size rule also matched the big atlas). Fixed; it now fills the screen, hides the rest of the HUD while open, says "Tap to set a waypoint" and has a CLEAR PIN button (touch had no way to clear a waypoint).
+- Vehicle panel (speed/health) was huge and covered the "Exit vehicle" prompt: now a compact two-line panel; the prompt sits above it.
+- Tutorial card made compact (and tap it to skip, "K skip" now reads "tap to skip"); notifications moved to top-centre so they no longer collide with it; install tip moved to the top and shown only on the menu; FPS readout moved clear of the iPhone home indicator.
+DISTRICT QUALITY OF LIFE
+- Autosave every 45 s and when you leave the page / switch apps (never during cutscenes, travel, wasted/busted), with a small tick. Toggle: Phone > Settings > Autosave.
+- Skip button on every cutscene.
+- Tap the mission objective to open the phone on the Story/Jobs app; both now have "Track objective" (sets a waypoint to the mission target).
+- GPS app: distance to every place, "Nearest" sort, a pin button on every row to set a waypoint WITHOUT teleporting, an "active waypoint" card with Clear.
+- Weapon picker: tap the weapon pill at the bottom to choose any owned weapon (no number keys on a phone).
+- Aim assist (touch): shots are nudged toward the nearest hostile (cop / gang member) within ~15 degrees and weapon range; never civilians, never melee, never when disabled. Toggle: Phone > Settings > Aim assist.
+- Emote wheel entries are tappable. Controls tray labels corrected: the game has crouch (Z) and eat/drink (X), not "block"/"shove"; added DANCE-free tray: SWAP, CROUCH, EAT, MED, PHONE, EMOTE, DIVE, SIT, VIEW.
+- Android: short vibration when you take damage.
+
+==========================================================================
+PASS 7: zone-based HUD (no overlaps), controls v3, real navigation + Maps app
+==========================================================================
+SPACING - the HUD and the controls were laid out independently, so they collided (speed panel vs exit button, notifications vs tutorial, compass vs pause/map buttons ...).
+- hud.css: every touch HUD element now owns a reserved slot in a fixed zone layout:
+    top-left  status pills + tutorial (compact card)      top-centre  compass, mission, route pill, ONE toast stack
+    top-right  minimap, clock, cash                       bottom-centre  prompt / subtitles above the weapon pill or vehicle gauge
+    both bottom corners  the thumb clusters (width reserved so centre elements shrink instead of colliding)
+- Notifications, news and wanted-alerts are merged into one toast stack. Pause/map buttons moved out of the compass. Mission pill is a single line. Tutorial card only exists while a tutorial is active.
+- Verified by an automated overlap checker (rects + circle geometry for buttons) over 6 devices (iPhone SE / 13 / 14 Pro Max, Pixel 7, Galaxy S9+, iPad Mini, all landscape) x 5 control sets (on foot, vehicle, aircraft, arena, Warden) with worst-case HUD content: 0 overlaps, 0 off-screen elements.
+CONTROLS V3
+- Buttons sit on arcs around the primary button with a guaranteed gap (positions in mobile.js LAY table), so they cannot touch each other; the cluster width is reserved against the HUD. Left-handed mode mirrors it.
+- New glass skin: layered gradients, inner ring, press ripple + glow, red primary buttons, FIRE shows live ammo (or PUNCH for melee), PULSE shows an energy ring, AIM glows amber while held, USE glows when something is interactable, stick has a refined ring/knob and a gold sprint state. No backdrop-filter (it is costly on phones).
+NAVIGATION (nav.js) - desktop and touch
+- Route pill: distance remaining along the route, ETA (from your real speed, on foot or driving), destination name, a turn arrow that points toward the next route point relative to where you are looking, tap = open Maps, x = clear.
+- On-screen waypoint marker with distance; when the target is off-screen or behind you it becomes an arrow clamped to the screen edge that slides out of the way of HUD blocks and thumb buttons.
+- Minimap range is configurable (CFG.mmRange) and widens automatically while driving.
+MAPS APP (replaces the old GPS list)
+- A real atlas inside the phone: you (with heading), every place as a coloured dot, active route, your pin. Tap a dot to select it, tap empty map to drop a pin, World / Nearby zoom.
+- Categories (Food, Fun, Shops, Services, Sights, Districts, Nature), search, nearest-first sorting, distance + ETA on every row.
+- Place sheet with Navigate (route, no teleport) and Fast travel; Save places with the star (Saved tab); Recent tab; active-route card with Clear.
+- Track objective (Story / Jobs) and the nav pill both feed the same waypoint system.

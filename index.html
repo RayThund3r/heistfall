@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="mobile.css">
 <link rel="stylesheet" href="phone.css">
 <link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="hud.css">
 <script>
 /* Device profile: computed BEFORE the game starts so the renderer can be created correctly. */
 (function(){
@@ -63,14 +64,15 @@ function load(u){return new Promise(function(res){var e=document.createElement('
   if(!useLocal&&!await load(CDN[0][1])){fail('three.min.js could not be loaded.\nPut it in the libs folder (run get_libs.py) or connect to the internet.');return}
   await Promise.all(CDN.slice(1).map(function(a){return load(useLocal?('libs/'+a[0]):a[1]).then(function(ok){return(ok||!useLocal)?ok:load(a[1])})}));
   bootSay('STARTING');
-  if(!await load('game.js?v=4')){fail('Missing game file: game.js (it must sit next to index.html)');return}
+  if(!await load('game.js?v=5')){fail('Missing game file: game.js (it must sit next to index.html)');return}
   window.__booted=1; /* from here on an error in an optional layer can never replace the game with the error screen */
-  await load('perf.js?v=4');   /* performance layer */
-  await load('perf2.js?v=4');  /* performance layer 2 */
-  await load('mobile.js?v=4'); /* touch + mobile UI layer */
-  await load('loader.js?v=4'); /* menu -> game loading transition */
-  await load('phone.js?v=4');  /* in-game smartphone */
-  await load('district.js?v=4'); /* district quality of life */
+  await load('perf.js?v=5');   /* performance layer */
+  await load('perf2.js?v=5');  /* performance layer 2 */
+  await load('mobile.js?v=5'); /* touch + mobile UI layer */
+  await load('loader.js?v=5'); /* menu -> game loading transition */
+  await load('phone.js?v=5');  /* in-game smartphone */
+  await load('district.js?v=5'); /* district quality of life */
+  await load('nav.js?v=5');      /* navigation: route pill + waypoint marker */
 })();
 </script>
 </body>
